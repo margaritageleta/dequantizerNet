@@ -5,7 +5,7 @@ import numpy as np
 from tqdm import tqdm
 import shutil
 
-N_PHOTOS = os.environ.get('N_PHOTOS')
+N_PHOTOS = int(os.environ.get('N_PHOTOS'))
 PREPROCESSED_DIR = os.path.join(os.environ.get('ROOT_PATH'), f'preprocessed_data')
 DATA_DIR = os.path.join(os.environ.get('ROOT_PATH'), f'data')
 

@@ -4,3 +4,4 @@ preprocessed_data/*
 notebooks/*
 src/__pycache__/*
 config.cfg
+environment.sh
