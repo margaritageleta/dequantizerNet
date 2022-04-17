@@ -11,16 +11,16 @@ class ImageDownloader:
     
     def download(self, outDir, category = None, n_photos = 100):
         if category:
-            self._download_by_search(outDir, category, n_photos)
+            return self._download_by_search(outDir, category, n_photos)
         else:
-            self._download_recent(outDir, n_photos)
+            return self._download_recent(outDir, n_photos)
         
     def _download_by_search(self, outDir, category, n_photos):
-        photos = flickr_api.Walker(flickr_api.Photo.search, tags=category)
+        photos = flickr_api.Walker(flickr_api.Photo.search, tags=category.replace("_"," "))
         
         folder = f'{outDir}/{category}/'
         self._create_folder(folder)
-        self._save_photos(photos, folder, 0, n_photos)
+        return self._save_photos(photos, folder, 0, n_photos)
 
     def _download_recent(self, outDir, n_photos):
         photos = flickr_api.Walker(flickr_api.Photo.getRecent)
@@ -29,12 +29,14 @@ class ImageDownloader:
         folder = f'{outDir}/recent/'
         self._create_folder(folder)
         
-        self._save_photos(photos, folder, lastId, n_photos)
+        n_downloaded = self._save_photos(photos, folder, lastId, n_photos)
         
-        self.config.set('FLICKR', 'lastId', lastId + n_photos)
+        self.config.set('FLICKR', 'lastId', lastId + n_downloaded)
         
         with open(self.configFile, 'w') as fp:
             self.config.write(fp)
+            
+        return n_downloaded
     
     def _create_folder(self, folder):
         if not os.path.exists(folder):
@@ -46,10 +48,12 @@ class ImageDownloader:
             if count == n_photos:
                 break
             try:
+                if photo.media != "photo": continue
                 photo.save(filename=f'{folder}/{lastId+count+1}', size_label='Medium 640')
                 count += 1
             except:
                 continue
+        return count
 
 if __name__ == '__main__':
     downloader = ImageDownloader('../config.cfg')
