@@ -43,13 +43,13 @@ class ImageProcessor():
     def process(self, image_path):
         self.read(image_path=image_path)
         self._image = self.crop(self._image)
+        self._image = self.scale(self._image)
+        self._image = self.normalize(self._image)
+
         self.image = self.crop(self.image)
         self.image = self.scale(self.image)
         self.image = self.compress(self.image)
         self.image = self.normalize(self.image)
-        
-        self._image = self.normalize(self._image)
-
 
 class ImageDataset(torch.utils.data.Dataset):
 
@@ -64,24 +64,25 @@ class ImageDataset(torch.utils.data.Dataset):
 
         self._image_data_path = image_root
         self.categories = categories
+        self.split = split
         self._colorspace = 'RGB' if rgb else 'L'
         self.processor = ImageProcessor()
 
         print(f'IMAGE DATA LOCATED AT: {self._image_data_path}')
 
         self.image_extension = image_extension
-        self._MAX_LIMIT = 10
+        self._MAX_LIMIT = 10000
 
         self._index = 0
         self._indices = []
         for category in self.categories:
-            print(category)
             directory = f'{self._image_data_path}/{category}'
-            file_count = sum(len(files) for _, _, files in os.walk(directory))
+            file_count = sum(len(files) for _, _, files in os.walk(directory)) // 2
             if self.split == 'train':
                 irange = range(0, int(0.8 * file_count))
             elif self.split == 'test':
                 irange = range(file_count - int(0.8 * file_count), file_count)
+            print(category, irange)
             for i in irange:
                 if self._index >= self._MAX_LIMIT:
                     break
@@ -92,15 +93,22 @@ class ImageDataset(torch.utils.data.Dataset):
         return self._index
 
     def __getitem__(self, index):
-        img_in = np.load(f'{self._indices[index]}_in', mmap_mode='r+').astype('float64')
-        img_out = np.load(f'{self._indices[index]}_out', mmap_mode='r+').astype('float64')
+        img_in = np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+').astype('float64')
+        img_out = np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+').astype('float64')
+        print('Image:')
+        print(f'{self._indices[index]}_in')
+        print(img_in.shape)
+        print(f'{self._indices[index]}_out')
+        print(img_out.shape)
+        print('\n')
+
         return (img_in, img_out)
 
 if __name__ == '__main__':
     MY_DATA_FOLDER = '../data'
     print('Preparing data...')
     mappings = []
-    with open(f'{MY_DATA_FOLDER}/mappings.txt') as f:
+    with open(f'../categories_test.txt') as f:
         for line in f:
             (key, i, img) = line.split()
             mappings.append(img)
@@ -117,9 +125,13 @@ if __name__ == '__main__':
     dataloader = torch.utils.data.DataLoader(
         dataset,
         batch_size=64,
-        shuffle=True,
+        shuffle=False,
         num_workers=4,
         pin_memory=True
     )
 
     print('Data loaded ++')
+    for i, batch in enumerate(dataloader):
+        print(i, batch)
+    print(len(dataloader.dataset))
+

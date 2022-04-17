@@ -50,3 +50,7 @@ class ImageDownloader:
                 count += 1
             except:
                 continue
+
+if __name__ == '__main__':
+    downloader = ImageDownloader('../config.cfg')
+    downloader.download('../data/', n_photos=5, category='soccer')

@@ -1,8 +1,6 @@
 from downloader import ImageDownloader
 import os
-from git import refresh
 from loader import ImageProcessor
-from py import process
 import numpy as np
 from tqdm import tqdm
 
@@ -16,7 +14,7 @@ def create_folder(folder):
         os.makedirs(folder)
 print("Reading categories list...")
 categories = []
-with open(f'../categories.txt') as f:
+with open(f'../categories_test.txt') as f:
     for line in f:
         (key, i, img) = line.split()
         categories.append(img)
