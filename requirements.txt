@@ -1,5 +1,5 @@
 flickr_api
-glob
+glob2
 numpy
 torch
-PIL
+pillow
