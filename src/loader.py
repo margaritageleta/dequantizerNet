@@ -81,8 +81,9 @@ class ImageDataset(torch.utils.data.Dataset):
             if self.split == 'train':
                 irange = range(0, int(0.8 * file_count))
             elif self.split == 'test':
-                irange = range(file_count - int(0.8 * file_count), file_count)
-            print(category, irange)
+                irange = range(int(0.8 * file_count), file_count)
+            else: raise Exception('Unknown split. Use train or test.')
+            # print(self.split, category, irange)
             for i in irange:
                 if self._index >= self._MAX_LIMIT:
                     break
@@ -95,12 +96,12 @@ class ImageDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         img_in = np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+').astype('float64')
         img_out = np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+').astype('float64')
-        print('Image:')
-        print(f'{self._indices[index]}_in')
-        print(img_in.shape)
-        print(f'{self._indices[index]}_out')
-        print(img_out.shape)
-        print('\n')
+        #print('Image:')
+        #print(f'{self._indices[index]}_in')
+        #print(img_in.shape)
+        #print(f'{self._indices[index]}_out')
+        #print(img_out.shape)
+        #print('\n')
 
         return (img_in, img_out)
 
@@ -116,7 +117,7 @@ if __name__ == '__main__':
     dataset = ImageDataset(
         image_root=MY_DATA_FOLDER, 
         categories=mappings,
-        split='train', 
+        split='test', 
         rgb=True,
         image_extension='JPEG'
     )
@@ -131,7 +132,7 @@ if __name__ == '__main__':
     )
 
     print('Data loaded ++')
-    for i, batch in enumerate(dataloader):
-        print(i, batch)
+    # for i, batch in enumerate(dataloader):
+    #     print(i, batch)
     print(len(dataloader.dataset))
 
