@@ -47,6 +47,8 @@ class ImageProcessor():
         self.image = self.scale(self.image)
         self.image = self.compress(self.image)
         self.image = self.normalize(self.image)
+        
+        self._image = self.normalize(self._image)
 
 
 class ImageDataset(torch.utils.data.Dataset):
