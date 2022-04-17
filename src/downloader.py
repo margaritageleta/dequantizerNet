@@ -52,5 +52,5 @@ class ImageDownloader:
                 continue
 
 if __name__ == '__main__':
-    downloader = ImageDownloader('../config.cfg')
-    downloader.download('../data/', n_photos=5, category='soccer')
+    downloader = ImageDownloader(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('CONFIG_FILE')))
+    downloader.download(os.path.join(os.environ.get('ROOT_PATH'), f'data'), n_photos=5, category='soccer')
