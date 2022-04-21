@@ -6,8 +6,8 @@ from tqdm import tqdm
 import shutil
 
 N_PHOTOS = int(os.environ.get('N_PHOTOS'))
-PREPROCESSED_DIR = os.path.join(os.environ.get('ROOT_PATH'), f'preprocessed_data')
-DATA_DIR = os.path.join(os.environ.get('ROOT_PATH'), f'data')
+PREPROCESSED_DIR = os.path.join(os.environ.get('DATA_PATH'), f'preprocessed_data')
+DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
 
 def create_folder(folder):
     if not os.path.exists(folder):
