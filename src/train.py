@@ -59,14 +59,14 @@ if __name__ == '__main__':
     )
     dataloader_train = torch.utils.data.DataLoader(
         dataset_train,
-        batch_size=64,
+        batch_size=params['batch_size'],
         shuffle=False,
         num_workers=4,
         pin_memory=True
     )
     dataloader_test = torch.utils.data.DataLoader(
         dataset_test,
-        batch_size=64,
+        batch_size=params['batch_size'],
         shuffle=False,
         num_workers=4,
         pin_memory=True
@@ -173,6 +173,6 @@ if __name__ == '__main__':
         tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
         if bool(running_loss < best_loss):
             print('Storing a new best model...')
-            torch.save(model.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{experiment}/VQNET_weights_{experiment}.pt'))
+            torch.save(model.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{experiment}/DQNET_weights_{experiment}.pt'))
             
     print('Finished Training!')
