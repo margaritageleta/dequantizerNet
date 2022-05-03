@@ -13,6 +13,7 @@ import pandas as pd
 import torch.nn as nn
 from tqdm import tqdm
 import torch.nn.functional as F
+import torch.optim as optim
 # import torch_optimizer as torchoptim
 
 from loader import ImageDataset
@@ -42,7 +43,7 @@ if __name__ == '__main__':
         for line in f:
             (key, i, img) = line.split()
             mappings.append(img)
-
+    batch_size = params['batch_size']
     dataset_train = ImageDataset(
         image_root=DATA_DIR, 
         categories=mappings,
@@ -59,14 +60,14 @@ if __name__ == '__main__':
     )
     dataloader_train = torch.utils.data.DataLoader(
         dataset_train,
-        batch_size=params['batch_size'],
+        batch_size=batch_size,
         shuffle=False,
         num_workers=4,
         pin_memory=True
     )
     dataloader_test = torch.utils.data.DataLoader(
         dataset_test,
-        batch_size=params['batch_size'],
+        batch_size=batch_size,
         shuffle=False,
         num_workers=4,
         pin_memory=True
@@ -129,8 +130,8 @@ if __name__ == '__main__':
 
             wandb.log({ 'MSE train': loss })
             
-            if k % 10 == 0:
-                print(f'{np.round(k / num_steps * 100,3)}% | TR Loss: {loss}')
+            if i % 10 == 0:
+                print(f'{np.round(i / num_steps * 100,3)}% | TR Loss: {loss}')
             loss.backward()
             optimizer.step()
 
@@ -158,8 +159,8 @@ if __name__ == '__main__':
             
             wandb.log({ 'BCE valid': loss })
             
-            if k % 10 == 0:
-                print(f'{np.round(k / num_steps_vd * 100,3)}% | VD Loss: {loss}')
+            if i % 10 == 0:
+                print(f'{np.round(i / num_steps_vd * 100,3)}% | VD Loss: {loss}')
 
             img_in = img_in.cpu()
             img_out = img_out.cpu()
