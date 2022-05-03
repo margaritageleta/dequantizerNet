@@ -16,7 +16,7 @@ import torch.nn.functional as F
 # import torch_optimizer as torchoptim
 
 from loader import ImageDataset
-from model.models import DQNET
+from architecture import DequantizerNet as DQNET
 
 ## Seed for reproducibility.
 seed = 2022 
@@ -127,7 +127,7 @@ if __name__ == '__main__':
 
             loss = criterion(img_out_pred, img_out)
 
-            wandb.log({ 'BCE train': loss })
+            wandb.log({ 'MSE train': loss })
             
             if k % 10 == 0:
                 print(f'{np.round(k / num_steps * 100,3)}% | TR Loss: {loss}')
