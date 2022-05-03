@@ -94,8 +94,8 @@ class ImageDataset(torch.utils.data.Dataset):
         return self._index
 
     def __getitem__(self, index):
-        img_in = np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+').astype('float64')
-        img_out = np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+').astype('float64')
+        img_in = np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+').astype('float64').transpose((2,0,1))
+        img_out = np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+').astype('float64').transpose((2,0,1))
         #print('Image:')
         #print(f'{self._indices[index]}_in')
         #print(img_in.shape)
