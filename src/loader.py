@@ -1,5 +1,6 @@
 import os
 import torch
+import random
 import pathlib
 import numpy as np
 import glob as glob
@@ -77,25 +78,29 @@ class ImageDataset(torch.utils.data.Dataset):
         self._indices = []
         for category in self.categories:
             directory = f'{self._image_data_path}/{category}'
-            file_count = sum(len(files) for _, _, files in os.walk(directory)) // 2
-            if self.split == 'train':
-                irange = range(0, int(0.8 * file_count))
-            elif self.split == 'test':
-                irange = range(int(0.8 * file_count), file_count)
-            else: raise Exception('Unknown split. Use train or test.')
-            # print(self.split, category, irange)
-            for i in irange:
-                if self._index >= self._MAX_LIMIT:
-                    break
-                self._index += 1
-                self._indices.append(f'{directory}/{i + 1}')
+            indexes = set()
+            for _, _, files in os.walk(directory):
+              for fileName in files:
+                if len(indexes) >= self._MAX_LIMIT:
+                  break
+                indexes.add(fileName.split('_')[0])
+
+            self._indices += [f'{directory}/{i}' for i in sorted(list(indexes))]
+        random.shuffle(self._indices)
+        L = len(self._indices)
+        if self.split == 'train':
+            self._indices = self._indices[0:int(0.8 * L)]
+        elif self.split == 'test':
+            self._indices = self._indices[int(0.8 * L):L]
+        else: raise Exception('Unknown split. Use train or test.')
+        self._index = len(self._indices)
 
     def __len__(self):
         return self._index
 
     def __getitem__(self, index):
-        img_in = np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+').astype('float64').transpose((2,0,1))
-        img_out = np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+').astype('float64').transpose((2,0,1))
+        img_in = np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1))
+        img_out = np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1))
         #print('Image:')
         #print(f'{self._indices[index]}_in')
         #print(img_in.shape)
@@ -103,13 +108,17 @@ class ImageDataset(torch.utils.data.Dataset):
         #print(img_out.shape)
         #print('\n')
 
-        return (img_in, img_out)
+        # In create_dataset.py
+        # The names are inverted.
+        # If you create the dataset
+        # again, invert this tuple !!!
+        return (img_out, img_in)
 
 if __name__ == '__main__':
-    MY_DATA_FOLDER = '../data'
+    MY_DATA_FOLDER = f"{os.environ.get('DATA_PATH')}/data"
     print('Preparing data...')
     mappings = []
-    with open(f'../categories_test.txt') as f:
+    with open(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('CAT_FILE'))) as f:
         for line in f:
             (key, i, img) = line.split()
             mappings.append(img)
@@ -135,4 +144,3 @@ if __name__ == '__main__':
     # for i, batch in enumerate(dataloader):
     #     print(i, batch)
     print(len(dataloader.dataset))
-
