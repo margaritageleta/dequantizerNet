@@ -6,7 +6,14 @@ import torch.nn.functional as F
 
 warnings.filterwarnings("ignore")
 
-FUNCS = {"tanh":F.tanh, "relu":F.relu, "leakyRelu":F.leaky_relu, "gelu":F.gelu}
+FUNCS = {
+  "tanh":F.tanh, 
+  "relu":F.relu, 
+  "leakyRelu":F.leaky_relu, 
+  "gelu":F.gelu,
+  "sigmoid": F.sigmoid,
+  "identity": lambda x:x
+}
 
 class ConvBlock(nn.Module):
     def __init__(self, input_channels, output_channels, params):                                                                                                           
@@ -36,6 +43,7 @@ class DequantizerNet(nn.Module):
     def __init__(self, params):
         super().__init__()
         self.F = FUNCS[params["block_TF"]]
+        self.OUT_F = FUNCS[params["out_TF"]]
 
         self.aug_block1 = Residual(ConvBlock(3,3,params))
         self.aug_block2 = Residual(ConvBlock(6,6,params))
@@ -54,5 +62,5 @@ class DequantizerNet(nn.Module):
         x = self.red_block2(x)
         x = self.F(x)
         x = self.red_block3(x)
+        x = self.OUT_F(x)
         return x
-        
