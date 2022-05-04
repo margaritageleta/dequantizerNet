@@ -9,12 +9,17 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import torch.optim as optim
+import matplotlib.pyplot as plt
 # import torch_optimizer as torchoptim
 
 from loader import ImageDataset
 from architecture import DequantizerNet as DQNET
 
 DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
+
+def create_folder(folder):
+  if not os.path.exists(folder):
+    os.makedirs(folder)
 
 def set_reproductibility(seed= 2022):
     random.seed(seed)
@@ -107,6 +112,26 @@ def init_wandb(params, model):
     print('Wandb ready.')
     wandb.watch(model)
 
+def viz2wandb(img_out, img_in, img_out_pred):
+  img_out = img_out.permute(1,2,0).detach().numpy().astype(np.float32)
+  img_in = img_in.permute(1,2,0).detach().numpy().astype(np.float32)
+  img_out_pred = img_out_pred.permute(1,2,0).detach().numpy().astype(np.float32)
+
+  fig, ax = plt.subplots(1, 3, figsize=(12, 10))
+  ax[0].imshow(img_out)
+  ax[1].imshow(img_in)
+  ax[2].imshow(img_out_pred)
+  ax[0].set_title('Original image')
+  ax[1].set_title('Quantized image')
+  ax[2].set_title('Dequantized image')
+  ax[0].axis('off')
+  ax[1].axis('off')
+  ax[2].axis('off')
+
+  plt.close('all')
+
+  return fig
+
 def gradient_step(data, optimizer, model, criterion, step, num_steps, device):
     img_in, img_out = data[0].to(device), data[1].to(device)
             
@@ -114,7 +139,7 @@ def gradient_step(data, optimizer, model, criterion, step, num_steps, device):
     optimizer.zero_grad()
 
     #forward + backward + optimize
-    img_out_pred = model(img_in).cpu()
+    img_out_pred = model(img_in)
 
     loss = criterion(img_out_pred, img_out)
 
@@ -128,10 +153,14 @@ def gradient_step(data, optimizer, model, criterion, step, num_steps, device):
     img_in = img_in.cpu()
     img_out = img_out.cpu()
     img_out_pred = img_out_pred.detach().cpu()
+
+    fig = viz2wandb(img_out[0,...], img_in[0,...], img_out_pred[0,...])
+    if step % 10 == 0:
+      wandb.log({f"Dequantization at step {step}": fig})
     del img_in, img_out, img_out_pred
     gc.collect()
     torch.cuda.empty_cache()
-    return loss.item()
+    return loss.cpu().item()
 
 def val_step(data, model, criterion, step, num_steps_vd, device):
     
@@ -161,6 +190,8 @@ if __name__ == '__main__':
     ## Load params
     params, categories, batch_size = get_params()
 
+    create_folder(os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}'))
+
     dataloader_train, dataloader_test = get_data(categories, batch_size)
     
     model, device, criterion, optimizer = get_model_components(params)
@@ -179,19 +210,19 @@ if __name__ == '__main__':
         model = model.train()
         running_loss = 0.0
         for i, data in enumerate(dataloader_train):
-            running_loss += gradient_step(data, optimizer, model, criterion, i, num_steps, device)
+          running_loss += gradient_step(data, optimizer, model, criterion, i, num_steps, device)
         
-        tqdm.write('[%d, %5d] TR loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps)) 
+          tqdm.write('[%d, %5d] TR loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps)) 
         
         ## VALIDATION LOOP
         model = model.eval()
         running_loss = 0.0
         for i, data in enumerate(dataloader_test):
             
-            running_loss += val_step(data, model, criterion, i, num_steps_vd, device)
-        tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
+          running_loss += val_step(data, model, criterion, i, num_steps_vd, device)
+          tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
         if bool(running_loss < best_loss):
-            print('Storing a new best model...')
-            torch.save(model.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
+          print('Storing a new best model...')
+          torch.save(model.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
             
     print('Finished Training!')
