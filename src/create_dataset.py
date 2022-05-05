@@ -15,8 +15,8 @@ def create_folder(folder):
         os.makedirs(folder)
 
 def ack_download(file, n):
-    with open(file,"w") as f:
-        f.write(n)
+    with open(file, "w") as f:
+        f.write(str(n))
 
 def get_last_cat_downloaded(file):
     n = 0
@@ -53,7 +53,7 @@ with tqdm(categories[last_cat:]) as t:
                     np.save(f"{data_folder}{id}_out", processor._image, allow_pickle=True)
                 shutil.rmtree(preprocessed_folder)
                 done = True
-                ack_download(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('DWD_CAT_FILE')), last_cat+i)
+                ack_download(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('DWD_CAT_FILE')), last_cat + i)
             except:
                 errors += 1
                 time.sleep(20)
