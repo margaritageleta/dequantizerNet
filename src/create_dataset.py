@@ -22,7 +22,7 @@ print("Categories list read")
 downloader = ImageDownloader(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('CONFIG_FILE')))
 processor = ImageProcessor()
 with tqdm(categories) as t:
-    for category in categories:
+    for category in t:
         t.set_description(f"Downloading images with tag <<{category}>>")
         n_downloaded = downloader.download(PREPROCESSED_DIR, category=category, n_photos=N_PHOTOS)
         preprocessed_folder = f"{PREPROCESSED_DIR}/{category}/"
@@ -31,8 +31,8 @@ with tqdm(categories) as t:
         t.set_description(f"Processing images with tag <<{category}>>", refresh=True)
         for id in range(1, n_downloaded + 1):
             processor.process(f"{preprocessed_folder}{id}.jpg")
-            np.save(f"{data_folder}{id}_in", processor._image, allow_pickle=True)
-            np.save(f"{data_folder}{id}_out", processor.image, allow_pickle=True)
+            np.save(f"{data_folder}{id}_in", processor.image, allow_pickle=True)
+            np.save(f"{data_folder}{id}_out", processor._image, allow_pickle=True)
         shutil.rmtree(preprocessed_folder)
 
 

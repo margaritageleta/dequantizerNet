@@ -112,7 +112,7 @@ class ImageDataset(torch.utils.data.Dataset):
         # The names are inverted.
         # If you create the dataset
         # again, invert this tuple !!!
-        return (img_out, img_in)
+        return (img_in, img_out)
 
 if __name__ == '__main__':
     MY_DATA_FOLDER = f"{os.environ.get('DATA_PATH')}/data"
