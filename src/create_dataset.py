@@ -22,7 +22,7 @@ def get_last_cat_downloaded(file):
     n = 0
     with open(file,"r") as f:
         n = f.readlines()
-    return int(n)
+    return int(n[0])
     
 print("Reading categories list...")
 categories = []
