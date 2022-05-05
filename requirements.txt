@@ -5,3 +5,4 @@ torch
 pillow
 tqdm
 dotenv
+python-dotenv
