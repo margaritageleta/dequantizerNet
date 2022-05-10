@@ -58,6 +58,29 @@ with tqdm(categories[last_cat:]) as t:
                 errors += 1
                 time.sleep(20)
 
+print("All categories downloaded. Validating files...")
+
+for root, dirs, files in os.walk(DATA_DIR):
+  for fileName in files:
+    path = root+"/"+fileName
+    if os.path.exists(path):
+      try:
+        np.load(path, mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1))
+      except:
+        os.remove(path)
+        if "_in.npy" in path:
+          path = path.replace("_in.npy","_out.npy")
+        else:
+          path = path.replace("_out.npy","_in.npy")
+        if os.path.exists(path):
+          os.remove(path)
+
+
+      
+
+
+
+
 
 
 
