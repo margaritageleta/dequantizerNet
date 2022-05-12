@@ -3,6 +3,10 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
+from torchvision import models
+from torchvision import transforms
+from torchvision.models.feature_extraction import create_feature_extractor
+
 warnings.filterwarnings("ignore")
 
 FUNCS = {
@@ -171,3 +175,35 @@ class Discriminator(nn.Module):
         o = o.reshape(b, -1)
         o = self.FC_funnel(o)
         return o
+
+class ContentLoss(nn.Module):
+    
+
+    def __init__(self, feature_name: str,
+                 feature_mean: list,
+                 feature_std: list) -> None:
+        super(ContentLoss, self).__init__()
+
+        self.feature_name = feature_name
+        model = models.vgg19(True)
+        self.feature_extractor = create_feature_extractor(model, [feature_name])
+        
+        self.feature_extractor.eval()
+
+        self.normalize = transforms.Normalize(feature_mean, feature_std)
+
+        for model_parameters in self.feature_extractor.parameters():
+            model_parameters.requires_grad = False
+
+    def forward(self, sr_tensor: torch.Tensor, hr_tensor: torch.Tensor) -> torch.Tensor:
+        
+        sr_tensor = self.normalize(sr_tensor)
+        hr_tensor = self.normalize(hr_tensor)
+
+        sr_feature = self.feature_extractor(sr_tensor)[self.feature_name]
+        hr_feature = self.feature_extractor(hr_tensor)[self.feature_name]
+
+        content_loss = F.mse_loss(sr_feature, hr_feature)
+
+        return content_loss
+
