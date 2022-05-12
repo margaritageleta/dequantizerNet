@@ -1,8 +1,18 @@
+## EXPERIMENT NUMBER ##
 experiment: 1
+## INPUT SIZE ##
 batch_size: 16
-epochs: 10
+width: 256
+height: 256
+## DATA HYPERPARAMS ##
+max_limit: 1000
+percentage_train: 0.8
+## TRAINING HYPERPARAMS ##
+epochs: 50
 lr: 0.005
 weight_decay: 0
+## MODEL HYPERPARAMS ##
+n_aug_blocks: 2
 conv_TF: "tanh"
 block_TF: "tanh"
 out_TF: "sigmoid"
