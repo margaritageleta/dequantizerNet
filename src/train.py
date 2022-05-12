@@ -45,32 +45,36 @@ def get_params(fileName = "params.yaml"):
         
     return params, mappings, batch_size
 
-def get_data(categories, batch_size):
+def get_data(categories, params):
     print('Preparing data...')
     dataset_train = ImageDataset(
         image_root=DATA_DIR, 
         categories=categories,
         split='train', 
         rgb=True,
-        image_extension='JPEG'
+        image_extension='JPEG',
+        max_limit=params['max_limit'],
+        percentage_train=params['percentage_train']
     )
-    dataset_test = ImageDataset(
+    dataset_valid = ImageDataset(
         image_root=DATA_DIR, 
         categories=categories,
         split='test', 
         rgb=True,
-        image_extension='JPEG'
+        image_extension='JPEG',
+        max_limit=params['max_limit'],
+        percentage_train=params['percentage_train']
     )
     dataloader_train = torch.utils.data.DataLoader(
         dataset_train,
-        batch_size=batch_size,
+        batch_size=params['batch_size'],
         shuffle=False,
         num_workers=4,
         pin_memory=True
     )
-    dataloader_test = torch.utils.data.DataLoader(
-        dataset_test,
-        batch_size=batch_size,
+    dataloader_valid = torch.utils.data.DataLoader(
+        dataset_valid,
+        batch_size=params['batch_size'],
         shuffle=False,
         num_workers=4,
         pin_memory=True
@@ -78,7 +82,7 @@ def get_data(categories, batch_size):
     
     print('Dataset prepared.')
 
-    return dataloader_train, dataloader_test 
+    return dataloader_train, dataloader_valid
 
 def get_model_components(params):
     model = DQNET(params)
@@ -168,7 +172,7 @@ def val_step(data, model, criterion, step, num_steps_vd, device):
     img_in, img_out = data[0].to(device), data[1].to(device)
     
     with torch.no_grad():
-        img_out_pred = model(img_in).cpu()
+        img_out_pred = model(img_in)
         loss = criterion(img_out_pred, img_out)
     
     wandb.log({ 'BCE valid': loss })
@@ -193,20 +197,23 @@ if __name__ == '__main__':
 
     create_folder(os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}'))
 
-    dataloader_train, dataloader_valid = get_data(categories, batch_size)
+    dataloader_train, dataloader_valid = get_data(categories, params)
+    
+    epochs = params['epochs']
+    batch_size = params['batch_size']
+    
+    len_dataloader_train = len(dataloader_train)
+    len_dataloader_valid = len(dataloader_valid)
+    num_steps = len_dataloader_train // batch_size + 1
+    num_steps_vd = len_dataloader_valid // batch_size + 1
+    
+    if len_dataloader_train == 0 or len_dataloader_valid == 0:
+        raise Exception('0 samples in the dataloader !!!')
     
     model, device, criterion, optimizer = get_model_components(params)
 
     init_wandb(params, model)
-   
-    epochs = params['epochs']
-    
-    len_dataloader_train = len(dataloader_train)
-    len_dataloader_valid = len(dataloader_test)
-    num_steps = len_dataloader_train // batch_size
-    num_steps_vd = len_dataloader_valid // batch_size
-    
-    
+
     best_loss = np.inf
     for epoch in range(epochs): 
        
@@ -219,7 +226,7 @@ if __name__ == '__main__':
         ## VALIDATION LOOP
         model = model.eval()
         running_loss = 0.0
-        for i, data in tqdm(enumerate(dataloader_test), file=sys.stdout):
+        for i, data in tqdm(enumerate(dataloader_valid), file=sys.stdout):
             running_loss += val_step(data, model, criterion, i, num_steps_vd, device)
             tqdm.write(f'[{i+1}/{len_dataloader_valid}] VD loss: {running_loss / (i+1)}') 
         if bool(running_loss < best_loss):
