@@ -8,6 +8,8 @@ from PIL import Image
 import torch
 from torch.utils.data import DataLoader
 
+class breakNestedLoops(Exception): pass
+
 class ImageProcessor():
     """
     Function to preprocess the images from the custom 
@@ -76,19 +78,25 @@ class ImageDataset(torch.utils.data.Dataset):
 
         self.image_extension = image_extension
         self._MAX_LIMIT = max_limit
+        
+        print(f'MAX LIMIT SET TO: {self._MAX_LIMIT}')
 
         self._index = 0
         self._indices = []
-        for category in self.categories:
-            directory = f'{self._image_data_path}/{category}'
-            indexes = set()
-            for _, _, files in os.walk(directory):
-              for fileName in files:
-                if len(indexes) >= self._MAX_LIMIT:
-                  break
-                indexes.add(fileName.split('_')[0])
-
+        try:
+            for category in self.categories:
+                directory = f'{self._image_data_path}/{category}'
+                indexes = set()
+                for _, _, files in os.walk(directory):
+                    for fileName in files:
+                        indexes.add(fileName.split('_')[0])
+                    self._index += len(indexes)
+                    if self._index >= self._MAX_LIMIT:
+                        raise breakNestedLoops()
+                self._indices += [f'{directory}/{i}' for i in sorted(list(indexes))]
+        except breakNestedLoops as e: 
             self._indices += [f'{directory}/{i}' for i in sorted(list(indexes))]
+                              
         random.shuffle(self._indices)
         L = len(self._indices)
         if self.split == 'train':
@@ -97,6 +105,7 @@ class ImageDataset(torch.utils.data.Dataset):
             self._indices = self._indices[int(percentage_train * L):L]
         else: raise Exception('Unknown split. Use train or test.')
         self._index = len(self._indices)
+        print(f'SAMPLES IN DATALOADER: {self._index}')
 
     def __len__(self):
         return self._index
@@ -104,17 +113,6 @@ class ImageDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         img_in = torch.from_numpy(np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
         img_out = torch.from_numpy(np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
-        #print('Image:')
-        #print(f'{self._indices[index]}_in')
-        #print(img_in.shape)
-        #print(f'{self._indices[index]}_out')
-        #print(img_out.shape)
-        #print('\n')
-
-        # In create_dataset.py
-        # The names are inverted.
-        # If you create the dataset
-        # again, invert this tuple !!!
         return (img_in, img_out)
 
 if __name__ == '__main__':
@@ -129,9 +127,10 @@ if __name__ == '__main__':
     dataset = ImageDataset(
         image_root=MY_DATA_FOLDER, 
         categories=mappings,
-        split='test', 
+        split='train', 
         rgb=True,
-        image_extension='JPEG'
+        image_extension='JPEG',
+        max_limit=10
     )
     print('Dataset prepared.')
 
