@@ -63,7 +63,7 @@ class ConvBlock(nn.Module):
         # print(f'\t\t Module conv2: {x.shape}')
         return x
 
-class Residual(torch.nn.Module):
+class Residual(nn.Module):
     def __init__(self, module):
         super().__init__()
         self.module = module
@@ -75,7 +75,7 @@ class Residual(torch.nn.Module):
         # print(f'\t Module outputs: {outputs.shape}')
         return torch.cat([self.module(inputs),inputs], dim=1)
 
-class DequantizerNet(nn.Module):
+class Generator(nn.Module):
     def __init__(self, params):
         super().__init__()
         
@@ -120,3 +120,54 @@ class DequantizerNet(nn.Module):
         x = torch.narrow(x, 1, 0, 3)
         # print(x.shape)
         return x
+    
+class Discriminator(nn.Module):
+    def __init__(self, params):
+        super().__init__()
+        self.CONV_funnel = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=3, padding=1),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(64),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(64, 128, kernel_size=3, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(128, 128, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(128),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(128, 256, kernel_size=3, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(256),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(256, 512, kernel_size=3, padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2),
+
+            nn.Conv2d(512, 512, kernel_size=3, stride=2, padding=1),
+            nn.BatchNorm2d(512),
+            nn.LeakyReLU(0.2),
+            nn.Conv2d(512, 1, kernel_size=1)
+        )
+        
+        self.FC_funnel = nn.Sequential(
+            nn.Linear(256, 64),
+            nn.LeakyReLU(0.2),
+            nn.Linear(64, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        b = x.size(0)
+        o = self.CONV_funnel(x)
+        o = o.reshape(b, -1)
+        o = self.FC_funnel(o)
+        return o
