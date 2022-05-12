@@ -6,6 +6,7 @@ import torch
 import wandb
 import random
 import numpy as np
+import glob2 as glob
 import torch.nn as nn
 from tqdm import tqdm
 import torch.optim as optim
@@ -18,8 +19,8 @@ from architecture import DequantizerNet as DQNET
 DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
 
 def create_folder(folder):
-  if not os.path.exists(folder):
-    os.makedirs(folder)
+    if not os.path.exists(folder):
+        os.makedirs(folder)
 
 def set_reproductibility(seed= 2022):
     random.seed(seed)
@@ -113,24 +114,24 @@ def init_wandb(params, model):
     wandb.watch(model)
 
 def viz2wandb(img_out, img_in, img_out_pred):
-  img_out = img_out.permute(1,2,0).detach().numpy().astype(np.float32)
-  img_in = img_in.permute(1,2,0).detach().numpy().astype(np.float32)
-  img_out_pred = img_out_pred.permute(1,2,0).detach().numpy().astype(np.float32)
+    img_out = img_out.permute(1,2,0).detach().numpy().astype(np.float32)
+    img_in = img_in.permute(1,2,0).detach().numpy().astype(np.float32)
+    img_out_pred = img_out_pred.permute(1,2,0).detach().numpy().astype(np.float32)
 
-  fig, ax = plt.subplots(1, 3, figsize=(12, 10))
-  ax[0].imshow(img_out)
-  ax[1].imshow(img_in)
-  ax[2].imshow(img_out_pred)
-  ax[0].set_title('Original image')
-  ax[1].set_title('Quantized image')
-  ax[2].set_title('Dequantized image')
-  ax[0].axis('off')
-  ax[1].axis('off')
-  ax[2].axis('off')
+    fig, ax = plt.subplots(1, 3, figsize=(12, 10))
+    ax[0].imshow(img_out)
+    ax[1].imshow(img_in)
+    ax[2].imshow(img_out_pred)
+    ax[0].set_title('Original image')
+    ax[1].set_title('Quantized image')
+    ax[2].set_title('Dequantized image')
+    ax[0].axis('off')
+    ax[1].axis('off')
+    ax[2].axis('off')
 
-  plt.close('all')
+    plt.close('all')
 
-  return fig
+    return fig
 
 def gradient_step(data, optimizer, model, criterion, step, num_steps, device):
     img_in, img_out = data[0].to(device), data[1].to(device)
@@ -156,7 +157,7 @@ def gradient_step(data, optimizer, model, criterion, step, num_steps, device):
 
     fig = viz2wandb(img_out[0,...], img_in[0,...], img_out_pred[0,...])
     if step % 10 == 0:
-      wandb.log({f"Dequantization at step {step}": fig})
+         wandb.log({f"Dequantization at step {step}": fig})
     del img_in, img_out, img_out_pred
     gc.collect()
     torch.cuda.empty_cache()
@@ -192,7 +193,7 @@ if __name__ == '__main__':
 
     create_folder(os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}'))
 
-    dataloader_train, dataloader_test = get_data(categories, batch_size)
+    dataloader_train, dataloader_valid = get_data(categories, batch_size)
     
     model, device, criterion, optimizer = get_model_components(params)
 
@@ -200,29 +201,29 @@ if __name__ == '__main__':
    
     epochs = params['epochs']
     
-    num_steps = len(dataloader_train) // batch_size
-    num_steps_vd = len(dataloader_test) // batch_size
+    len_dataloader_train = len(dataloader_train)
+    len_dataloader_valid = len(dataloader_test)
+    num_steps = len_dataloader_train // batch_size
+    num_steps_vd = len_dataloader_valid // batch_size
     
     
     best_loss = np.inf
-    for epoch in tqdm(range(epochs), file=sys.stdout): 
+    for epoch in range(epochs): 
        
         model = model.train()
         running_loss = 0.0
-        for i, data in enumerate(dataloader_train):
-          running_loss += gradient_step(data, optimizer, model, criterion, i, num_steps, device)
-        
-          tqdm.write('[%d, %5d] TR loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps)) 
+        for i, data in tqdm(enumerate(dataloader_train), file=sys.stdout):
+            running_loss += gradient_step(data, optimizer, model, criterion, i, num_steps, device)
+            tqdm.write(f'[{i+1}/{len_dataloader_train}] TR loss: {running_loss / (i+1)}') 
         
         ## VALIDATION LOOP
         model = model.eval()
         running_loss = 0.0
-        for i, data in enumerate(dataloader_test):
-            
-          running_loss += val_step(data, model, criterion, i, num_steps_vd, device)
-          tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
+        for i, data in tqdm(enumerate(dataloader_test), file=sys.stdout):
+            running_loss += val_step(data, model, criterion, i, num_steps_vd, device)
+            tqdm.write(f'[{i+1}/{len_dataloader_valid}] VD loss: {running_loss / (i+1)}') 
         if bool(running_loss < best_loss):
-          print('Storing a new best model...')
-          torch.save(model.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
+            print('Storing a new best model...')
+            torch.save(model.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
             
     print('Finished Training!')
