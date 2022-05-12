@@ -5,6 +5,7 @@ import pathlib
 import numpy as np
 import glob as glob
 from PIL import Image
+import torch
 from torch.utils.data import DataLoader
 
 class ImageProcessor():
@@ -61,6 +62,8 @@ class ImageDataset(torch.utils.data.Dataset):
         split: str = 'train',
         rgb: bool = True,
         image_extension: str = "JPEG",
+        max_limit: int = 10000,
+        percentage_train: float = 0.8
     ):
 
         self._image_data_path = image_root
@@ -72,7 +75,7 @@ class ImageDataset(torch.utils.data.Dataset):
         print(f'IMAGE DATA LOCATED AT: {self._image_data_path}')
 
         self.image_extension = image_extension
-        self._MAX_LIMIT = 10000
+        self._MAX_LIMIT = max_limit
 
         self._index = 0
         self._indices = []
@@ -89,9 +92,9 @@ class ImageDataset(torch.utils.data.Dataset):
         random.shuffle(self._indices)
         L = len(self._indices)
         if self.split == 'train':
-            self._indices = self._indices[0:int(0.8 * L)]
+            self._indices = self._indices[0:int(percentage_train * L)]
         elif self.split == 'test':
-            self._indices = self._indices[int(0.8 * L):L]
+            self._indices = self._indices[int(percentage_train * L):L]
         else: raise Exception('Unknown split. Use train or test.')
         self._index = len(self._indices)
 
@@ -99,8 +102,8 @@ class ImageDataset(torch.utils.data.Dataset):
         return self._index
 
     def __getitem__(self, index):
-        img_in = np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1))
-        img_out = np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1))
+        img_in = torch.from_numpy(np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
+        img_out = torch.from_numpy(np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
         #print('Image:')
         #print(f'{self._indices[index]}_in')
         #print(img_in.shape)
