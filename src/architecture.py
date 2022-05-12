@@ -78,7 +78,8 @@ class Residual(torch.nn.Module):
 class DequantizerNet(nn.Module):
     def __init__(self, params):
         super().__init__()
-        self.zero_channel = torch.zeros(params["batch_size"], 1, params["width"], params["height"], requires_grad=False, device="cuda").double()
+        
+        #self.zero_channel = torch.zeros(params["batch_size"], 1, params["width"], params["height"], requires_grad=False, device="cuda").double()
         
         self.pixel_shuffle = nn.PixelShuffle(2)
         self.pixel_unshuffle = PixelUnshuffle(2)
@@ -106,7 +107,9 @@ class DequantizerNet(nn.Module):
         self.blocks = nn.Sequential(*blocks)
 
     def forward(self, x):
-        x = torch.cat((x, self.zero_channel), 1)
+        b,_,w,h = x.shape
+        zero = torch.zeros(b, 1, w, h, requires_grad=False, device="cuda").double()
+        x = torch.cat((x, zero), 1)
         # print(x.shape)
         x = self.pixel_shuffle(x)
         # print(x.shape)
