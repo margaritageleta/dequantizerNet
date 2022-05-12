@@ -24,7 +24,7 @@ def pixel_unshuffle(input, downscale_factor):
 
     kernel = torch.zeros(size=[downscale_factor * downscale_factor * c,
                                1, downscale_factor, downscale_factor],
-                         device=input.device)
+                         device=input.device).double()
     for y in range(downscale_factor):
         for x in range(downscale_factor):
             kernel[x + y * downscale_factor::downscale_factor*downscale_factor, 0, y, x] = 1
@@ -52,15 +52,15 @@ class ConvBlock(nn.Module):
         self.F = FUNCS[params["conv_TF"]]
         
     def forward(self, x):
-        print('\t\t CONV BLOCK:')
+        # print('\t\t CONV BLOCK:')
         x = self.convTransp1(x)
-        print(f'\t\t Module transpose: {x.shape}')
+        # print(f'\t\t Module transpose: {x.shape}')
         x = self.F(x)
         x = self.conv1(x)
-        print(f'\t\t Module conv1: {x.shape}')
+        # print(f'\t\t Module conv1: {x.shape}')
         x = self.F(x)
         x = self.conv2(x)
-        print(f'\t\t Module conv2: {x.shape}')
+        # print(f'\t\t Module conv2: {x.shape}')
         return x
 
 class Residual(torch.nn.Module):
@@ -69,16 +69,16 @@ class Residual(torch.nn.Module):
         self.module = module
 
     def forward(self, inputs):
-        print('\t RESIDUAL BLOCK:')
-        print(f'\t Module inputs: {inputs.shape}')
+        # print('\t RESIDUAL BLOCK:')
+        # print(f'\t Module inputs: {inputs.shape}')
         outputs = self.module(inputs)
-        print(f'\t Module outputs: {outputs.shape}')
+        # print(f'\t Module outputs: {outputs.shape}')
         return torch.cat([self.module(inputs),inputs], dim=1)
 
 class DequantizerNet(nn.Module):
     def __init__(self, params):
         super().__init__()
-        self.zero_channel = torch.zeros(params["batch_size"], 1, params["width"], params["height"], requires_grad=False, device="cuda")
+        self.zero_channel = torch.zeros(params["batch_size"], 1, params["width"], params["height"], requires_grad=False, device="cuda").double()
         
         self.pixel_shuffle = nn.PixelShuffle(2)
         self.pixel_unshuffle = PixelUnshuffle(2)
@@ -96,24 +96,24 @@ class DequantizerNet(nn.Module):
             blocks.append(self.F)
          #REDUCTION BLOCKS
         while input_channels > 1:
-          blocks.append(ConvBlock(input_channels,input_channels//2,params))
-          input_channels//=2
-          if input_channels > 1:
-            blocks.append(self.F)
-          else:
-            blocks.append(self.OUT_F)
+            blocks.append(ConvBlock(input_channels,input_channels//2,params))
+            input_channels//=2
+            if input_channels > 1:
+                blocks.append(self.F)
+            else:
+                blocks.append(self.OUT_F)
         
         self.blocks = nn.Sequential(*blocks)
 
     def forward(self, x):
         x = torch.cat((x, self.zero_channel), 1)
-        print(x.shape)
+        # print(x.shape)
         x = self.pixel_shuffle(x)
-        print(x.shape)
+        # print(x.shape)
         x = self.blocks(x)
-        print('Blocks:', x.shape)
+        # print('Blocks:', x.shape)
         x = self.pixel_unshuffle(x)
-        print(x.shape)
+        # print(x.shape)
         x = torch.narrow(x, 1, 0, 3)
-        print(x.shape)
+        # print(x.shape)
         return x
