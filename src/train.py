@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 # import torch_optimizer as torchoptim
 
 from loader import ImageDataset
-from architecture import DequantizerNet as DQNET
+from architecture import Generator, Discriminator, ContentLoss
 
 DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
 
@@ -52,7 +52,8 @@ def get_data(categories, params):
         rgb=True,
         image_extension='JPEG',
         max_limit=params['max_limit'],
-        percentage_train=params['percentage_train']
+        percentage_train=params['percentage_train'],
+        pixel_shuffle=True
     )
     dataset_test = ImageDataset(
         image_root=DATA_DIR, 
@@ -61,7 +62,8 @@ def get_data(categories, params):
         rgb=True,
         image_extension='JPEG',
         max_limit=params['max_limit'],
-        percentage_train=params['percentage_train']
+        percentage_train=params['percentage_train'],
+        pixel_shuffle=True
     )
     dataloader_train = torch.utils.data.DataLoader(
         dataset_train,
@@ -98,21 +100,22 @@ def get_model_components(params):
     print('Generator # parameters:', sum(param.numel() for param in generator.parameters()))
     
     ## Define adversarial loss function ##
-    criterion = nn.MSELoss() 
+    adv_criterion = nn.BCEWithLogitsLoss()
+    content_criterion = ContentLoss(params)
 
     ## Define optimizers for each network ##
     d_optimizer = optim.Adam(
-        params=model.parameters(), 
+        params=discriminator.parameters(), 
         lr=params['lr'],
         weight_decay=params['weight_decay']
     )
     g_optimizer = optim.Adam(
-        params=model.parameters(), 
+        params=generator.parameters(), 
         lr=params['lr'],
         weight_decay=params['weight_decay']
     )
 
-    return discriminator, generator, device, criterion, d_optimizer, g_optimizer
+    return discriminator, generator, device, adv_criterion, content_criterion, d_optimizer, g_optimizer
 
 def init_wandb(params, model):
     ## Initialize wandb
@@ -170,7 +173,7 @@ def update_discriminator(
     
     # Calculate the classification score of the discriminator model for real samples:
     real_label_pred = discriminator(real_img)
-    d_loss_real = criterion(real_label_pred, real_label)
+    d_loss_real = adv_criterion(real_label_pred, real_label)
     
     # Calculate the classification score of the discriminator model for fake samples:
     fake_label_pred = discriminator(fake_img)
@@ -199,10 +202,9 @@ def update_discriminator(
 def update_generator(
     generator, 
     discriminator,
-    real_img, 
-    real_label, 
+    real_img,
+    real_label,
     fake_img,
-    fake_label, 
     optimizer, 
     adv_criterion,
     content_criterion,
@@ -260,10 +262,10 @@ if __name__ == '__main__':
     dataloader_train, dataloader_test = get_data(categories, params)
     
     ## Load models, criterion and optimizer ##
-    discriminator, generator, device, criterion, d_optimizer, g_optimizer = get_model_components(params)
+    discriminator, generator, device, adv_criterion, content_criterion, d_optimizer, g_optimizer = get_model_components(params)
 
     ## Initialize ##
-    init_wandb(params, model)
+    init_wandb(params, generator) #TODO: Can we watch both??
    
     epochs = params['epochs']
     batch_size = params['batch_size']
@@ -299,7 +301,7 @@ if __name__ == '__main__':
                 fake_img=img_out_pred,
                 fake_label=fake_label,
                 optimizer=d_optimizer, 
-                adv_criterion=nn.BCEWithLogitsLoss,
+                adv_criterion=adv_criterion,
             )
             
             # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
@@ -309,11 +311,11 @@ if __name__ == '__main__':
                 generator=generator,
                 discriminator=discriminator,
                 real_img=img_out, 
+                real_label=real_label,
                 fake_img=img_out_pred,
-                fake_out=fake_out,
                 optimizer=g_optimizer,
-                adv_criterion=nn.BCEWithLogitsLoss,
-                content_criterion=ContentLoss,
+                adv_criterion=adv_criterion,
+                content_criterion=content_criterion,
                 params=params
             )
             
@@ -322,11 +324,12 @@ if __name__ == '__main__':
         running_loss = 0.0
         for i, data in enumerate(dataloader_test):
             
-            validation(data, generator, criterion, i, device)
+            validation(data, generator, adv_criterion, i, device) #TODO: Validation is not being performed
             #tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
         if bool(running_loss < best_loss):
             print('Storing a new best model...')
-            torch.save(model.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
+            torch.save(generator.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
+            torch.save(discriminator.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
             
         ##########################################################################################
             

@@ -83,8 +83,6 @@ class Generator(nn.Module):
     def __init__(self, params):
         super().__init__()
         
-        #self.zero_channel = torch.zeros(params["batch_size"], 1, params["width"], params["height"], requires_grad=False, device="cuda").double()
-        
         self.pixel_shuffle = nn.PixelShuffle(2)
         self.pixel_unshuffle = PixelUnshuffle(2)
 
@@ -99,7 +97,7 @@ class Generator(nn.Module):
             blocks.append(Residual(ConvBlock(input_channels,input_channels,params)))
             input_channels *= 2
             blocks.append(self.F)
-         #REDUCTION BLOCKS
+        #REDUCTION BLOCKS
         while input_channels > 1:
             blocks.append(ConvBlock(input_channels,input_channels//2,params))
             input_channels//=2
@@ -111,9 +109,6 @@ class Generator(nn.Module):
         self.blocks = nn.Sequential(*blocks)
 
     def forward(self, x):
-        b,_,w,h = x.shape
-        zero = torch.zeros(b, 1, w, h, requires_grad=False, device="cuda").double()
-        x = torch.cat((x, zero), 1)
         # print(x.shape)
         x = self.pixel_shuffle(x)
         # print(x.shape)
@@ -179,18 +174,16 @@ class Discriminator(nn.Module):
 class ContentLoss(nn.Module):
     
 
-    def __init__(self, feature_name: str,
-                 feature_mean: list,
-                 feature_std: list) -> None:
+    def __init__(self, params) -> None:
         super(ContentLoss, self).__init__()
 
-        self.feature_name = feature_name
+        self.feature_name = params["feature_name"]
         model = models.vgg19(True)
-        self.feature_extractor = create_feature_extractor(model, [feature_name])
+        self.feature_extractor = create_feature_extractor(model, [params["feature_name"]])
         
         self.feature_extractor.eval()
 
-        self.normalize = transforms.Normalize(feature_mean, feature_std)
+        self.normalize = transforms.Normalize(params["feature_mean"], params["feature_std"])
 
         for model_parameters in self.feature_extractor.parameters():
             model_parameters.requires_grad = False
