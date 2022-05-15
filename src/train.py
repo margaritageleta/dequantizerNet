@@ -231,7 +231,7 @@ def validation(data, generator, criterion, step, device):
     
     with torch.no_grad():
         img_out_pred = generator(img_in).cpu()
-        #loss = criterion(img_out_pred, img_out)
+        loss = criterion(img_out_pred, img_out)
     
     #wandb.log({ 'g_loss valid': loss })
     
@@ -247,7 +247,7 @@ def validation(data, generator, criterion, step, device):
     gc.collect()
     torch.cuda.empty_cache()
 
-    # return loss.item()
+    return loss.item()
 
 
 if __name__ == '__main__':
@@ -324,12 +324,26 @@ if __name__ == '__main__':
         running_loss = 0.0
         for i, data in enumerate(dataloader_test):
             
-            validation(data, generator, adv_criterion, i, device) #TODO: Validation is not being performed
+            running_loss += validation(data, generator, adv_criterion, i, device) #TODO: Validation is not being performed
             #tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
         if bool(running_loss < best_loss):
             print('Storing a new best model...')
-            torch.save(generator.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
-            torch.save(discriminator.state_dict(), os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/DQNET_weights_{params["experiment"]}.pt'))
+            ## Save generator state ##
+            torch.save(
+                generator.state_dict(), 
+                os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/generator_weights_{params["experiment"]}.pt'))
+            ## Save generator optimizer state ##
+            torch.save(
+               g_optimizer.state_dict(), 
+               os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/generator_optimizer_{params["experiment"]}.pt'))
+            ## Save discriminator state ##
+            torch.save(
+                discriminator.state_dict(), 
+                os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/discriminator_weights_{params["experiment"]}.pt'))
+            ## Save discriminator optimizer state ##
+            torch.save(
+               g_optimizer.state_dict(), 
+               os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/discriminator_optimizer_{params["experiment"]}.pt'))
             
         ##########################################################################################
             
