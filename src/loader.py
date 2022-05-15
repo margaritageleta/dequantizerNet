@@ -109,7 +109,7 @@ class ImageDataset(torch.utils.data.Dataset):
         self._index = len(self._indices)
         print(f'SAMPLES IN DATALOADER: {self._index}')
         if self.pixel_shuffle:
-            self.zero_channel = torch.zeros(1, 1, 256, 256, requires_grad=False).double()
+            self.zero_channel = torch.zeros(1, 256, 256, requires_grad=False).double()
         
 
     def __len__(self):
@@ -118,7 +118,7 @@ class ImageDataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         img_in = torch.from_numpy(np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
         if self.pixel_shuffle:
-            img_in = torch.cat((img_in ,self.zero_channel), 1)
+            img_in = torch.cat((img_in ,self.zero_channel), 0)
         img_out = torch.from_numpy(np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
         return (img_in, img_out)
 
