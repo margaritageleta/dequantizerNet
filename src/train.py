@@ -53,7 +53,7 @@ def get_data(categories, params):
         image_extension='JPEG',
         max_limit=params['max_limit'],
         percentage_train=params['percentage_train'],
-        pixel_shuffle=True
+        pixel_shuffle=params['concat_zero']
     )
     dataset_test = ImageDataset(
         image_root=DATA_DIR, 
@@ -63,7 +63,7 @@ def get_data(categories, params):
         image_extension='JPEG',
         max_limit=params['max_limit'],
         percentage_train=params['percentage_train'],
-        pixel_shuffle=True
+        pixel_shuffle=params['concat_zero']
     )
     dataloader_train = torch.utils.data.DataLoader(
         dataset_train,
@@ -230,14 +230,18 @@ def validation(data, generator, criterion, step, device):
     img_in, img_out = data[0].to(device), data[1].to(device)
     
     with torch.no_grad():
-        img_out_pred = generator(img_in).cpu()
+        img_out_pred = generator(img_in)
         loss = criterion(img_out_pred, img_out)
     
     #wandb.log({ 'g_loss valid': loss })
     
     if step % 10 == 0:
         #print(f'VD Loss at step {step}: {loss}')
-        fig = viz2wandb(img_out[0,...], img_in[0,...], img_out_pred[0,...])
+        fig = viz2wandb(
+            img_out[0,...].cpu(), 
+            torch.narrow(img_in[0,...].cpu(), 1, 0, 3),
+            img_out_pred[0,...].cpu()
+          )
         wandb.log({f"Dequantization at step {step}": fig})
 
     img_in = img_in.cpu()
