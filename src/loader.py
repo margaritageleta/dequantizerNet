@@ -1,9 +1,7 @@
 import os
 import torch
 import random
-import pathlib
 import numpy as np
-import glob as glob
 from PIL import Image
 import torch
 from torch.utils.data import DataLoader
@@ -141,7 +139,7 @@ if __name__ == '__main__':
     )
     print('Dataset prepared.')
 
-    dataloader = torch.utils.data.DataLoader(
+    dataloader = DataLoader(
         dataset,
         batch_size=64,
         shuffle=False,

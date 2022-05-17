@@ -11,7 +11,6 @@ import torch.nn as nn
 from tqdm import tqdm
 import torch.optim as optim
 import matplotlib.pyplot as plt
-# import torch_optimizer as torchoptim
 
 from loader import ImageDataset
 from architecture import Generator, Discriminator, ContentLoss

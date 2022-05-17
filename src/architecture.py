@@ -3,9 +3,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from torchvision import models
-from torchvision import transforms
-#from torchvision.models.feature_extraction import create_feature_extractor
+from torchvision_local import models
+from torchvision_local import transforms
+from torchvision_local.models.feature_extraction import create_feature_extractor
 
 warnings.filterwarnings("ignore")
 
@@ -83,7 +83,6 @@ class Generator(nn.Module):
     def __init__(self, params):
         super().__init__()
         
-        self.concat_zero = params['concat_zero']
         self.pixel_shuffle = nn.PixelShuffle(2)
         self.pixel_unshuffle = PixelUnshuffle(2)
 
@@ -110,10 +109,6 @@ class Generator(nn.Module):
         self.blocks = nn.Sequential(*blocks)
 
     def forward(self, x):
-        if not self.concat_zero:
-            b,_,w,h = x.shape
-            zero = torch.zeros(b, 1, w, h, requires_grad=False, device="cuda").double()
-            x = torch.cat((x, zero), 1)
         # print(x.shape)
         x = self.pixel_shuffle(x)
         # print(x.shape)
@@ -183,26 +178,26 @@ class ContentLoss(nn.Module):
         super(ContentLoss, self).__init__()
 
         self.feature_name = params["feature_name"]
-        # model = models.vgg19(True)
-        #self.feature_extractor = create_feature_extractor(model, [params["feature_name"]])
+        model = models.vgg19(True)
+        self.feature_extractor = create_feature_extractor(model, [params["feature_name"]])
         
-        #self.feature_extractor.eval()
+        self.feature_extractor.eval()
 
-        #self.normalize = transforms.Normalize(params["feature_mean"], params["feature_std"])
+        self.normalize = transforms.Normalize(params["feature_mean"], params["feature_std"])
 
-        #for model_parameters in self.feature_extractor.parameters():
-        #    model_parameters.requires_grad = False
+        for model_parameters in self.feature_extractor.parameters():
+            model_parameters.requires_grad = False
 
     def forward(self, sr_tensor: torch.Tensor, hr_tensor: torch.Tensor) -> torch.Tensor:
         
-        #sr_tensor = self.normalize(sr_tensor)
-        #hr_tensor = self.normalize(hr_tensor)
+        sr_tensor = self.normalize(sr_tensor)
+        hr_tensor = self.normalize(hr_tensor)
 
-        #sr_feature = self.feature_extractor(sr_tensor)[self.feature_name]
-        #hr_feature = self.feature_extractor(hr_tensor)[self.feature_name]
+        sr_feature = self.feature_extractor(sr_tensor)[self.feature_name]
+        hr_feature = self.feature_extractor(hr_tensor)[self.feature_name]
 
         content_loss = F.mse_loss(sr_tensor, hr_tensor)
-        # content_loss = F.mse_loss(sr_feature, hr_feature)
+        content_loss = F.mse_loss(sr_feature, hr_feature)
 
         return content_loss
 

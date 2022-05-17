@@ -5,4 +5,3 @@ torch
 pillow
 tqdm
 python-dotenv
-torchvision
