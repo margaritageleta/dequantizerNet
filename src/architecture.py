@@ -140,7 +140,7 @@ class Generator2(nn.Module):
     def __init__(self, params):
         upsample_block_num = params["n_aug_blocks"]
 
-        super(Generator, self).__init__()
+        super(Generator2, self).__init__()
         self.block1 = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=9, padding=4),
             nn.PReLU()
