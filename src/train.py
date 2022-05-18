@@ -1,7 +1,6 @@
 import os
 import gc
 import sys
-from torch._C import DeviceObjType
 import yaml
 import torch
 import wandb
@@ -12,9 +11,9 @@ import torch.nn as nn
 from tqdm import tqdm
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import gc
 
 from loader import ImageDataset
+from mertrics import SSIM, PSNR
 from architecture import Generator, Discriminator, ContentLoss
 
 DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
@@ -102,7 +101,7 @@ def get_model_components(params):
     
     ## Define adversarial loss function ##
     adv_criterion = nn.BCEWithLogitsLoss()
-    content_criterion = ContentLoss(params).to(device)
+    content_criterion = ContentLoss(params)
 
     ## Define optimizers for each network ##
     d_optimizer = optim.Adam(
@@ -208,15 +207,20 @@ def update_generator(
     optimizer, 
     adv_criterion,
     content_criterion,
-    params
+    params,
+    device
 ):
 
     generator.zero_grad()
+    generator = generator.cpu()
+    content_criterion.model = content_criterion.model.to(device)
     content_loss = params['content_weight'] * content_criterion(fake_img, real_img)
+    content_criterion.model = content_criterion.model.cpu()
     wandb.log({ 'content_loss train': content_loss.item() })
     adversarial_loss = params['adversarial_weight'] * adv_criterion(discriminator(fake_img), real_label)
     wandb.log({ 'adversarial_loss train': adversarial_loss.item() })
     g_loss = content_loss + adversarial_loss
+    generator = generator.to(device)
     g_loss.backward()
 
     optimizer.step()
@@ -225,15 +229,17 @@ def update_generator(
     
     return g_loss
 
-def validation(data, generator, criterion, step, device):
+def validation(data, generator, step, device):
     
     img_in, img_out = data[0].to(device), data[1].to(device)
     
     with torch.no_grad():
         img_out_pred = generator(img_in)
-        loss = criterion(img_out_pred, img_out)
+        ssim = SSIM(img_out, img_out_pred)
+        psnr = PSNR(img_out, img_out_pred)
     
-    #wandb.log({ 'g_loss valid': loss })
+    wandb.log({ 'ssim valid': ssim })
+    wandb.log({ 'psnr valid': psnr })
     
     if step % 10 == 0:
         #print(f'VD Loss at step {step}: {loss}')
@@ -305,7 +311,8 @@ if __name__ == '__main__':
                 fake_img=img_out_pred,
                 fake_label=fake_label,
                 optimizer=d_optimizer, 
-                adv_criterion=adv_criterion
+                adv_criterion=adv_criterion,
+                device = device
             )
             
             # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
@@ -322,11 +329,6 @@ if __name__ == '__main__':
                 content_criterion=content_criterion,
                 params=params
             )
-            img_in, img_out = img_in.cpu(), img_out.cpu()
-            del img_in, img_out
-            torch.cuda.empty_cache()
-
-            
             
         ## VALIDATION LOOP #######################################################################
         generator = generator.eval()
