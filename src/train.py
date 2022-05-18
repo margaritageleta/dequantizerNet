@@ -242,7 +242,7 @@ def validation(data, generator, criterion, step, device):
         #print(f'VD Loss at step {step}: {loss}')
         fig = viz2wandb(
             img_out[0,...].cpu(), 
-            torch.narrow(img_in[0,...].cpu(), 1, 0, 3),
+            torch.narrow(img_in[0,...].cpu().unsqueeze(0),1, 0, 3).squeeze(0),
             img_out_pred[0,...].cpu()
           )
         wandb.log({f"Dequantization at step {step}": fig})
