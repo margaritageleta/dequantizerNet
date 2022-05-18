@@ -101,7 +101,7 @@ def get_model_components(params):
     
     ## Define adversarial loss function ##
     adv_criterion = nn.BCEWithLogitsLoss()
-    content_criterion = ContentLoss(params)
+    content_criterion = ContentLoss(params).to(device)
 
     ## Define optimizers for each network ##
     d_optimizer = optim.Adam(
@@ -207,20 +207,15 @@ def update_generator(
     optimizer, 
     adv_criterion,
     content_criterion,
-    params,
-    device
+    params
 ):
 
     generator.zero_grad()
-    generator = generator.cpu()
-    content_criterion.model = content_criterion.model.to(device)
     content_loss = params['content_weight'] * content_criterion(fake_img, real_img)
-    content_criterion.model = content_criterion.model.cpu()
     wandb.log({ 'content_loss train': content_loss.item() })
     adversarial_loss = params['adversarial_weight'] * adv_criterion(discriminator(fake_img), real_label)
     wandb.log({ 'adversarial_loss train': adversarial_loss.item() })
     g_loss = content_loss + adversarial_loss
-    generator = generator.to(device)
     g_loss.backward()
 
     optimizer.step()
@@ -309,8 +304,7 @@ if __name__ == '__main__':
                 fake_img=img_out_pred,
                 fake_label=fake_label,
                 optimizer=d_optimizer, 
-                adv_criterion=adv_criterion,
-                device = device
+                adv_criterion=adv_criterion
             )
             
             # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss
