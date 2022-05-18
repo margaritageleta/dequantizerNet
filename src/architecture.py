@@ -1,11 +1,12 @@
 import warnings
 import torch
+import math
 from torch import nn
 import torch.nn.functional as F
 
-from torchvision import models
-from torchvision import transforms
-from torchvision.models.feature_extraction import create_feature_extractor
+from torchvision_local import models
+from torchvision_local import transforms
+from torchvision_local.models.feature_extraction import create_feature_extractor
 
 warnings.filterwarnings("ignore")
 
@@ -50,15 +51,30 @@ class PixelUnshuffle(nn.Module):
 class ConvBlock(nn.Module):
     def __init__(self, input_channels, output_channels, params):                                                                                                           
         super().__init__()
-        self.convTransp1 = nn.ConvTranspose2d(input_channels, input_channels*2, 5, stride=2, padding=2,output_padding=1)
-        self.conv1 = nn.Conv2d(input_channels*2,input_channels*2,3,stride=1, padding=1)
-        self.conv2 = nn.Conv2d(input_channels*2,output_channels,3,stride=2, padding=1)
+        self.upsampling_method = params['upsampling_method']
+        if self.upsampling_method == 'deconvolution':
+            self.upsample1 = nn.ConvTranspose2d(input_channels, input_channels*2, 5, stride=2, padding=2, output_padding=1)
+            self.conv1 = nn.Conv2d(input_channels*2,input_channels*2,3,stride=1, padding=1)
+            self.conv2 = nn.Conv2d(input_channels*2,output_channels,3,stride=2, padding=1)
+        elif self.upsampling_method == 'bilinear':
+            self.upsample1 = nn.Upsample(scale_factor=2, mode='bilinear')
+            self.conv1 = nn.Conv2d(input_channels,input_channels*2,3,stride=1, padding=1)
+            self.conv2 = nn.Conv2d(input_channels*2,output_channels,3,stride=2, padding=1)
+        else: raise Exception('Unknown upsampling method.')
         self.F = FUNCS[params["conv_TF"]]
         
     def forward(self, x):
-        # print('\t\t CONV BLOCK:')
-        x = self.convTransp1(x)
-        # print(f'\t\t Module transpose: {x.shape}')
+        print('\t\t CONV BLOCK:')
+        c = x.size(1)
+        print(f'Size is {c}')
+        x = self.upsample1(x)
+        #print(f'After upsample {x.shape}')
+        #if self.upsampling_method != 'deconvolution':
+        #    o_channels = int(c*2)// c
+        #    print(f'O channels: {o_channels}')
+        #    x = torch.cat([x for _ in range(o_channels)], axis=1)
+        #    print(x.shape)
+        print(f'\t\t Module transpose: {x.shape}')
         x = self.F(x)
         x = self.conv1(x)
         # print(f'\t\t Module conv1: {x.shape}')
@@ -119,6 +135,40 @@ class Generator(nn.Module):
         x = torch.narrow(x, 1, 0, 3)
         # print(x.shape)
         return x
+    
+class Generator2(nn.Module):
+    def __init__(self, params):
+        upsample_block_num = params["n_aug_blocks"]
+
+        super(Generator, self).__init__()
+        self.block1 = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=9, padding=4),
+            nn.PReLU()
+        )
+        self.block2 = ResidualBlock(64)
+        self.block3 = ResidualBlock(64)
+        self.block4 = ResidualBlock(64)
+        self.block5 = ResidualBlock(64)
+        self.block6 = ResidualBlock(64)
+        self.block7 = nn.Sequential(
+            nn.Conv2d(64, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64)
+        )
+        block8 = [UpsampleBLock(64, 2) for _ in range(upsample_block_num)]
+        block8.append(nn.Conv2d(64, 3, kernel_size=9, padding=4))
+        self.block8 = nn.Sequential(*block8)
+
+    def forward(self, x):
+        block1 = self.block1(x)
+        block2 = self.block2(block1)
+        block3 = self.block3(block2)
+        block4 = self.block4(block3)
+        block5 = self.block5(block4)
+        block6 = self.block6(block5)
+        block7 = self.block7(block6)
+        block8 = self.block8(block1 + block7)
+
+        return (torch.tanh(block8) + 1) / 2
  
 class Discriminator(nn.Module):
     def __init__(self, params):
@@ -158,9 +208,9 @@ class Discriminator(nn.Module):
         )
         
         self.FC_funnel = nn.Sequential(
-            nn.Linear(4096, 8),
+            nn.Linear(256, 64),
             nn.LeakyReLU(0.2),
-            nn.Linear(8, 1),
+            nn.Linear(64, 1),
             nn.Sigmoid()
         )
 
@@ -178,7 +228,7 @@ class ContentLoss(nn.Module):
         super(ContentLoss, self).__init__()
 
         self.feature_name = params["feature_name"]
-        model = models.vgg19(True).double()
+        model = models.vgg19(True)
         self.feature_extractor = create_feature_extractor(model, [params["feature_name"]])
         
         self.feature_extractor.eval()
