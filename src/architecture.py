@@ -4,9 +4,9 @@ import math
 from torch import nn
 import torch.nn.functional as F
 
-from torchvision_local import models
-from torchvision_local import transforms
-from torchvision_local.models.feature_extraction import create_feature_extractor
+from torchvision import models
+from torchvision import transforms
+from torchvision.models.feature_extraction import create_feature_extractor
 
 warnings.filterwarnings("ignore")
 
@@ -250,4 +250,36 @@ class ContentLoss(nn.Module):
         content_loss = F.mse_loss(sr_feature, hr_feature)
 
         return content_loss
+
+class ResidualBlock(nn.Module):
+    def __init__(self, channels):
+        super(ResidualBlock, self).__init__()
+        self.conv1 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.prelu = nn.PReLU()
+        self.conv2 = nn.Conv2d(channels, channels, kernel_size=3, padding=1)
+        self.bn2 = nn.BatchNorm2d(channels)
+
+    def forward(self, x):
+        residual = self.conv1(x)
+        residual = self.bn1(residual)
+        residual = self.prelu(residual)
+        residual = self.conv2(residual)
+        residual = self.bn2(residual)
+
+        return x + residual
+
+
+class UpsampleBLock(nn.Module):
+    def __init__(self, in_channels, up_scale):
+        super(UpsampleBLock, self).__init__()
+        self.conv = nn.Conv2d(in_channels, in_channels * up_scale ** 2, kernel_size=3, padding=1)
+        self.pixel_shuffle = nn.PixelShuffle(up_scale)
+        self.prelu = nn.PReLU()
+
+    def forward(self, x):
+        x = self.conv(x)
+        x = self.pixel_shuffle(x)
+        x = self.prelu(x)
+        return x
 
