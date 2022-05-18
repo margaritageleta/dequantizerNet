@@ -16,6 +16,14 @@ def PSNR(secret, revealed):
     if mse == 0: mse = torch.Tensor([10e-46])
     return 20 * torch.log10(255.0 / torch.sqrt(mse))
 
+def gaussian(window_size, sigma):
+	"""
+	Courtesy of https://github.com/Po-Hsun-Su/pytorch-ssim
+	Function for the computation of Differentiable structural similarity (SSIM) index.
+	"""
+	gauss = torch.Tensor([exp(-(x - window_size//2)**2/float(2*sigma**2)) for x in range(window_size)])
+	return gauss/gauss.sum()
+
 def create_window(window_size, channel):
 	"""
 	Courtesy of https://github.com/Po-Hsun-Su/pytorch-ssim
