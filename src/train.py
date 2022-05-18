@@ -13,7 +13,7 @@ import torch.optim as optim
 import matplotlib.pyplot as plt
 
 from loader import ImageDataset
-from mertrics import SSIM, PSNR
+from metrics import SSIM, PSNR
 from architecture import Generator, Discriminator, ContentLoss
 
 DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
@@ -335,7 +335,7 @@ if __name__ == '__main__':
         running_loss = 0.0
         for i, data in enumerate(dataloader_test):
             
-            running_loss += validation(data, generator, adv_criterion, i, device) #TODO: Validation is not being performed
+            running_loss += validation(data, generator, i, device) #TODO: Validation is not being performed
             #tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
         if bool(running_loss < best_loss):
             print('Storing a new best model...')
