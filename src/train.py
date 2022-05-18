@@ -163,13 +163,11 @@ def update_discriminator(
     optimizer,
     adv_criterion
 ):
-
     # During discriminator model training, enable discriminator model backpropagation.
     for d_parameters in discriminator.parameters():
         d_parameters.requires_grad = True
 
     discriminator.zero_grad()
-    
     # Calculate the classification score of the discriminator model for real samples:
     real_label_pred = discriminator(real_img)
     d_loss_real = adv_criterion(real_label_pred, real_label)
@@ -179,6 +177,7 @@ def update_discriminator(
     d_loss_fake = adv_criterion(fake_label_pred, fake_label)
     
     d_loss = d_loss_real + d_loss_fake
+
     d_loss.backward(retain_graph=True)
     
     optimizer.step()
@@ -207,15 +206,20 @@ def update_generator(
     optimizer, 
     adv_criterion,
     content_criterion,
-    params
+    params,
+    device
 ):
+
     generator.zero_grad()
-    
+    generator = generator.cpu()
+    content_criterion.model = content_criterion.model.to(device)
     content_loss = params['content_weight'] * content_criterion(fake_img, real_img)
+    content_criterion.model = content_criterion.model.cpu()
     wandb.log({ 'content_loss train': content_loss.item() })
     adversarial_loss = params['adversarial_weight'] * adv_criterion(discriminator(fake_img), real_label)
     wandb.log({ 'adversarial_loss train': adversarial_loss.item() })
     g_loss = content_loss + adversarial_loss
+    generator = generator.to(device)
     g_loss.backward()
 
     optimizer.step()
@@ -305,6 +309,7 @@ if __name__ == '__main__':
                 fake_label=fake_label,
                 optimizer=d_optimizer, 
                 adv_criterion=adv_criterion,
+                device = device
             )
             
             # (2) Update G network: minimize 1-D(G(z)) + Perception Loss + Image Loss + TV Loss

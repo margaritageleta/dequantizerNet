@@ -178,7 +178,7 @@ class ContentLoss(nn.Module):
         super(ContentLoss, self).__init__()
 
         self.feature_name = params["feature_name"]
-        model = models.vgg19(True)
+        model = models.vgg19(True).double()
         self.feature_extractor = create_feature_extractor(model, [params["feature_name"]])
         
         self.feature_extractor.eval()
