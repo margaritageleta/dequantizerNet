@@ -1,7 +1,6 @@
 import os
 import gc
 import sys
-from torch._C import DeviceObjType
 import yaml
 import torch
 import wandb
@@ -12,9 +11,9 @@ import torch.nn as nn
 from tqdm import tqdm
 import torch.optim as optim
 import matplotlib.pyplot as plt
-import gc
 
 from loader import ImageDataset
+from metrics import SSIM, PSNR
 from architecture import Generator, Discriminator, ContentLoss
 
 DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
@@ -225,15 +224,17 @@ def update_generator(
     
     return g_loss
 
-def validation(data, generator, criterion, step, device):
+def validation(data, generator, step, device):
     
     img_in, img_out = data[0].to(device), data[1].to(device)
     
     with torch.no_grad():
         img_out_pred = generator(img_in)
-        loss = criterion(img_out_pred, img_out)
+        ssim = SSIM(img_out, img_out_pred)
+        psnr = PSNR(img_out, img_out_pred)
     
-    #wandb.log({ 'g_loss valid': loss })
+    wandb.log({ 'ssim valid': ssim })
+    wandb.log({ 'psnr valid': psnr })
     
     if step % 10 == 0:
         #print(f'VD Loss at step {step}: {loss}')
@@ -325,8 +326,6 @@ if __name__ == '__main__':
             img_in, img_out = img_in.cpu(), img_out.cpu()
             del img_in, img_out
             torch.cuda.empty_cache()
-
-            
             
         ## VALIDATION LOOP #######################################################################
         generator = generator.eval()
