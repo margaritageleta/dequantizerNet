@@ -3,9 +3,9 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from torchvision_local import models
-from torchvision_local import transforms
-from torchvision_local.models.feature_extraction import create_feature_extractor
+from torchvision import models
+from torchvision import transforms
+from torchvision.models.feature_extraction import create_feature_extractor
 
 warnings.filterwarnings("ignore")
 

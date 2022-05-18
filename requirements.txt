@@ -2,6 +2,7 @@ flickr_api
 glob2
 numpy
 torch
+torchvision
 pillow
 tqdm
 python-dotenv
