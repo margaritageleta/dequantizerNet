@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 import shutil
 import time
+import torch
 
 N_PHOTOS = int(os.environ.get('N_PHOTOS'))
 PREPROCESSED_DIR = os.path.join(os.environ.get('DATA_PATH'), f'preprocessed_data')
@@ -51,29 +52,26 @@ with tqdm(categories[last_cat:]) as t:
                     processor.process(f"{preprocessed_folder}{id}.jpg")
                     np.save(f"{data_folder}{id}_in", processor.image, allow_pickle=True)
                     np.save(f"{data_folder}{id}_out", processor._image, allow_pickle=True)
+                    try:
+                      torch.from_numpy(np.load(f"{data_folder}{id}_in", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
+                      torch.from_numpy(np.load(f"{data_folder}{id}_out", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
+                    except:
+                      try:
+                        os.remove(f"{data_folder}{id}_in")
+                      except:
+                        pass
+                      
+                      try:
+                        os.remove(f"{data_folder}{id}_out")
+                      except:
+                        pass
+
                 shutil.rmtree(preprocessed_folder)
                 done = True
                 ack_download(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('DWD_CAT_FILE')), last_cat + i)
             except:
                 errors += 1
                 time.sleep(20)
-
-print("All categories downloaded. Validating files...")
-
-for root, dirs, files in os.walk(DATA_DIR):
-  for fileName in files:
-    path = root+"/"+fileName
-    if os.path.exists(path):
-      try:
-        np.load(path, mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1))
-      except:
-        os.remove(path)
-        if "_in.npy" in path:
-          path = path.replace("_in.npy","_out.npy")
-        else:
-          path = path.replace("_out.npy","_in.npy")
-        if os.path.exists(path):
-          os.remove(path)
 
 
       
