@@ -2,15 +2,15 @@
 experiment: 1
 ## INPUT SIZE ##
 batch_size: 8
-width: 256
-height: 256
+width: 96
+height: 96
 ## DATA HYPERPARAMS ##
 max_limit: 500000000
 percentage_train: 0.8
 concat_zero: False
 ## TRAINING HYPERPARAMS ##
 epochs: 50
-lr: 0.005
+lr: 1e-4
 weight_decay: 0
 ## MODEL HYPERPARAMS ##
 n_aug_blocks: 0
@@ -22,5 +22,5 @@ out_TF: "sigmoid"
 feature_name: "features.35"
 feature_mean: [0.485, 0.456, 0.406]
 feature_std: [0.229, 0.224, 0.225]
-content_weight: 0.001
-adversarial_weight: 1
+content_weight: 1
+adversarial_weight: 0.001
