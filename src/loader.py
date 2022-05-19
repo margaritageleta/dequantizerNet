@@ -114,10 +114,10 @@ class ImageDataset(torch.utils.data.Dataset):
         return self._index
 
     def __getitem__(self, index):
-        img_in = torch.from_numpy(np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
+        img_in = torch.from_numpy(np.load(f'{self._indices[index]}_in.npy', mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
         if self.pixel_shuffle:
             img_in = torch.cat((img_in ,self.zero_channel), 0)
-        img_out = torch.from_numpy(np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+', allow_pickle=True).astype('float64').transpose((2,0,1)))
+        img_out = torch.from_numpy(np.load(f'{self._indices[index]}_out.npy', mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
         return (img_in, img_out)
 
 if __name__ == '__main__':
