@@ -52,6 +52,7 @@ with tqdm(categories[last_cat:]) as t:
                     processor.process(f"{preprocessed_folder}{id}.jpg")
                     np.save(f"{data_folder}{id}_in", processor.image, allow_pickle=True)
                     np.save(f"{data_folder}{id}_out", processor._image, allow_pickle=True)
+                for id in range(1, n_downloaded + 1):
                     try:
                       torch.from_numpy(np.load(f"{data_folder}{id}_in", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
                       torch.from_numpy(np.load(f"{data_folder}{id}_out", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
