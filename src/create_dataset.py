@@ -33,7 +33,7 @@ with open(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('CAT_FILE')))
 
 print("Categories list read")
 downloader = ImageDownloader(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('CONFIG_FILE')))
-processor = ImageProcessor()
+processor = ImageProcessor(n=96)
 last_cat = get_last_cat_downloaded(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('DWD_CAT_FILE')))
 with tqdm(categories[last_cat:]) as t:
     for i, category in enumerate(t):

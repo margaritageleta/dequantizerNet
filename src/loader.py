@@ -18,8 +18,9 @@ class ImageProcessor():
     - Compress compresses the image to a given resolution.
     - Normalize performs the normalization of the channels.
     """
-    def __init__(self):
+    def __init__(self, n):
         self.image = None
+        self.n = n
 
     def read(self, image_path, colorspace='RGB'):
         self._image = Image.open(image_path).convert(colorspace) 
@@ -32,8 +33,8 @@ class ImageProcessor():
         right = bottom = (proportion - 1) * n / proportion
         return image.crop((left, top, right, bottom))
 
-    def scale(self, image, n = 256):
-        return image.resize((n, n), Image.ANTIALIAS)
+    def scale(self, image):
+        return image.resize((self.n, self.n), Image.ANTIALIAS)
         
     def compress(self, image, quality=0):
         image.save('/tmp/aux.jpg', format='JPEG', quality=1)
@@ -71,7 +72,6 @@ class ImageDataset(torch.utils.data.Dataset):
         self.categories = categories
         self.split = split
         self._colorspace = 'RGB' if rgb else 'L'
-        self.processor = ImageProcessor()
         self.pixel_shuffle = pixel_shuffle
 
         print(f'IMAGE DATA LOCATED AT: {self._image_data_path}')

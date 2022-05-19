@@ -291,8 +291,8 @@ if __name__ == '__main__':
             # Used for the output of the discriminator binary classification, 
             # the input sample is from the dataset (real sample) and marked as 1, 
             # and the input sample from the generator (fake sample) is marked as 0.
-            real_label = torch.full([img_out.size(0), 1], 1.0, device=device)
-            fake_label = torch.full([img_in.size(0), 1], 0.0, device=device)
+            real_label = torch.full([img_out.size(0)], 1.0, device=device)
+            fake_label = torch.full([img_in.size(0)], 0.0, device=device)
         
             #tqdm.write('[%d, %5d] TR loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps))
             
@@ -321,8 +321,8 @@ if __name__ == '__main__':
                 content_criterion=content_criterion,
                 params=params
             )
-            img_in, img_out = img_in.cpu(), img_out.cpu()
-            del img_in, img_out
+            img_in, img_out, real_label, fake_label = img_in.cpu(), img_out.cpu(), real_label.cpu(), fake_label.cpu()
+            del img_in, img_out, real_label, fake_label
             torch.cuda.empty_cache()
             
         ## VALIDATION LOOP #######################################################################

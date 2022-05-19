@@ -7,13 +7,13 @@ height: 256
 ## DATA HYPERPARAMS ##
 max_limit: 500000000
 percentage_train: 0.8
-concat_zero: true
+concat_zero: False
 ## TRAINING HYPERPARAMS ##
 epochs: 50
 lr: 0.005
 weight_decay: 0
 ## MODEL HYPERPARAMS ##
-n_aug_blocks: 2
+n_aug_blocks: 0
 upsampling_method: "bilinear"
 conv_TF: "tanh"
 block_TF: "tanh"
