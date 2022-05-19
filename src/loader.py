@@ -107,7 +107,7 @@ class ImageDataset(torch.utils.data.Dataset):
         self._index = len(self._indices)
         print(f'SAMPLES IN DATALOADER: {self._index}')
         if self.pixel_shuffle:
-            self.zero_channel = torch.zeros(1, 256, 256, requires_grad=False).double()
+            self.zero_channel = torch.zeros(1, 256, 256, requires_grad=False)
         
 
     def __len__(self):

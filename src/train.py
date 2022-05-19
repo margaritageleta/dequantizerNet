@@ -92,8 +92,8 @@ def get_model_components(params):
     ## Send models to GPU ##
     device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f'Using device: {device}')
-    discriminator = discriminator.to(device).double()
-    generator = generator.to(device).double()
+    discriminator = discriminator.to(device)
+    generator = generator.to(device)
     
     ## Print out model parameters ##
     print('Discriminator # parameters:', sum(param.numel() for param in discriminator.parameters()))

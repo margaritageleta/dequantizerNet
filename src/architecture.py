@@ -29,7 +29,7 @@ def pixel_unshuffle(input, downscale_factor):
 
     kernel = torch.zeros(size=[downscale_factor * downscale_factor * c,
                                1, downscale_factor, downscale_factor],
-                         device=input.device).double()
+                         device=input.device)
     for y in range(downscale_factor):
         for x in range(downscale_factor):
             kernel[x + y * downscale_factor::downscale_factor*downscale_factor, 0, y, x] = 1
