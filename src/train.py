@@ -224,7 +224,7 @@ def update_generator(
     
     return g_loss
 
-def validation(data, generator, step, device):
+def validation(data, generator, step, device, save_rate=5):
     
     img_in, img_out = data[0].to(device), data[1].to(device)
     
@@ -236,8 +236,7 @@ def validation(data, generator, step, device):
     wandb.log({ 'ssim valid': ssim })
     wandb.log({ 'psnr valid': psnr })
     
-    if step % 10 == 0:
-        #print(f'VD Loss at step {step}: {loss}')
+    if step % save_rate == 0:
         fig = viz2wandb(
             img_out[0,...].cpu(), 
             torch.narrow(img_in[0,...].cpu().unsqueeze(0),1, 0, 3).squeeze(0),
@@ -251,6 +250,7 @@ def validation(data, generator, step, device):
     del img_in, img_out, img_out_pred
     gc.collect()
     torch.cuda.empty_cache()
+    return ssim, psnr
 
 
 if __name__ == '__main__':
@@ -277,7 +277,7 @@ if __name__ == '__main__':
     num_steps_vd = len(dataloader_test) // batch_size
     
     ## Metrics ##
-    best_loss = np.inf
+    best_psnr = -np.inf
     for epoch in tqdm(range(epochs), file=sys.stdout): 
        
         ## TRAINING LOOP #########################################################################
@@ -327,13 +327,16 @@ if __name__ == '__main__':
             
         ## VALIDATION LOOP #######################################################################
         generator = generator.eval()
-        running_loss = 0.0
+        running_psnr = 0.0
         for i, data in enumerate(dataloader_test):
             
-            validation(data, generator, i, device) 
+            ssim, psnr = validation(data, generator, i, device) 
+            running_psnr += psnr
             #tqdm.write('[%d, %5d] VD loss: %.3f' % (epoch + 1, i + 1, running_loss / num_steps_vd)) 
-        if bool(running_loss < best_loss):
+        if bool(running_psnr / num_steps_vd > best_psnr):
             print('Storing a new best model...')
+            ## Update best PSNR value ##
+            best_psnr = running_psnr / num_steps_vd
             ## Save generator state ##
             torch.save(
                 generator.state_dict(), 
