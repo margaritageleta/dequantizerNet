@@ -117,26 +117,46 @@ def get_model_components(params):
 
     ## Upload weights if resume ##
     if params['resume']:
-        discriminator_weights = torch.load(os.path.join(
-            os.environ.get('LOG_PATH'), 
-            f'experiment{params["experiment"]}/discriminator_weights_{params["experiment"]}.pt'))
-        discriminator.load_state_dict(discriminator_weights)
-        del discriminator_weights
-        discriminator_optimizer = torch.load(os.path.join(
-            os.environ.get('LOG_PATH'), 
-            f'experiment{params["experiment"]}/discriminator_optimizer_{params["experiment"]}.pt'))
-        d_optimizer.load_state_dict(discriminator_optimizer)
-        del discriminator_optimizer
-        generator_weights = torch.load(os.path.join(
-            os.environ.get('LOG_PATH'), 
-            f'experiment{params["experiment"]}/generator_weights_{params["experiment"]}.pt'))
-        generator.load_state_dict(generator_weights)
-        del generator_weights
-        generator_optimizer = torch.load(os.path.join(
-            os.environ.get('LOG_PATH'), 
-            f'experiment{params["experiment"]}/generator_optimizer_{params["experiment"]}.pt'))
-        g_optimizer.load_state_dict(generator_optimizer)
-        del g_optimizer
+        try:
+            discriminator_weights_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/discriminator_weights_{params["experiment"]}.pt')
+            discriminator_weights = torch.load(discriminator_weights_path)
+            discriminator.load_state_dict(discriminator_weights)
+            del discriminator_weights
+            print(f'Discriminator weights loaded from {discriminator_weights_path}')
+        except:
+            raise Exception('Unable to load discriminator weights!')
+        try:
+            discriminator_optimizer_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/discriminator_optimizer_{params["experiment"]}.pt')
+            discriminator_optimizer = torch.load(discriminator_optimizer_path)
+            d_optimizer.load_state_dict(discriminator_optimizer)
+            del discriminator_optimizer
+            print(f'Discriminator optimizer loaded from {discriminator_optimizer_path}')
+        except:
+            print('Unable to load discriminator optimizer. Resetting optimizer...')
+        try:
+            generator_weights_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/generator_weights_{params["experiment"]}.pt')
+            generator_weights = torch.load(generator_weights_path)
+            generator.load_state_dict(generator_weights)
+            del generator_weights
+            print(f'Generator weights loaded from {generator_weights_path}')
+        except:
+            raise Exception('Unable to load generator weights!')
+        try:
+            generator_optimizer_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/generator_optimizer_{params["experiment"]}.pt')
+            generator_optimizer = torch.load(generator_optimizer_path)
+            g_optimizer.load_state_dict(generator_optimizer)
+            del generator_optimizer
+            print(f'Generator optimizer loaded from {generator_optimizer_path}')
+        except:
+            print('Unable to load generator optimizer. Resetting optimizer...')
 
     return discriminator, generator, device, adv_criterion, content_criterion, d_optimizer, g_optimizer
 
