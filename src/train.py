@@ -14,7 +14,7 @@ import matplotlib.pyplot as plt
 
 from loader import ImageDataset
 from metrics import SSIM, PSNR
-from architecture import Generator, Discriminator, ContentLoss, Generator2
+from architecture import Generator, Discriminator, ContentLoss
 
 DATA_DIR = os.path.join(os.environ.get('DATA_PATH'), f'data')
 
@@ -87,7 +87,7 @@ def get_data(categories, params):
 def get_model_components(params):
     ## Define adversarial models ##
     discriminator = Discriminator(params)
-    generator = Generator2(params)
+    generator = Generator(params)
     
     ## Send models to GPU ##
     device  = torch.device("cuda" if torch.cuda.is_available() else "cpu")

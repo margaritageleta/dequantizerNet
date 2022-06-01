@@ -14,10 +14,12 @@ lr: 0.0001
 weight_decay: 0
 ## MODEL HYPERPARAMS ##
 n_aug_blocks: 0
+n_res_blocks: 10
 upsampling_method: "bilinear"
-conv_TF: "tanh"
-block_TF: "tanh"
-out_TF: "sigmoid"
+res_TF: "prelu"
+out_TF: "tanh"
+up_TF: "prelu"
+disc_TF: "sigmoid"
 ## CONTENT LOSS HYPERPARAMS ##
 feature_name: "features.35"
 feature_mean: [0.485, 0.456, 0.406]

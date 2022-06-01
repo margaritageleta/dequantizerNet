@@ -37,7 +37,7 @@ class ImageProcessor():
         return image.resize((self.n, self.n), Image.ANTIALIAS)
         
     def compress(self, image, quality=0):
-        image.save('/tmp/aux.jpg', format='JPEG', quality=1)
+        image.save('/tmp/aux.jpg', format='JPEG', quality=quality)
         return Image.open('/tmp/aux.jpg')
 
     def normalize(self, image):
@@ -51,7 +51,7 @@ class ImageProcessor():
 
         self.image = self.crop(self.image)
         self.image = self.scale(self.image)
-        self.image = self.compress(self.image)
+        self.image = self.compress(self.image, 50)
         self.image = self.normalize(self.image)
 
 class ImageDataset(torch.utils.data.Dataset):

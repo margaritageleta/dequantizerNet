@@ -43,30 +43,33 @@ with tqdm(categories[last_cat:]) as t:
         done = False
         while not done and errors < 10:
             try:
-                n_downloaded = downloader.download(PREPROCESSED_DIR, category=category, n_photos=N_PHOTOS)
+                n_downloaded = downloader.download(PREPROCESSED_DIR, category=category, n_photos=3*N_PHOTOS)
                 preprocessed_folder = f"{PREPROCESSED_DIR}/{category}/"
                 data_folder = f"{DATA_DIR}/{category}/"
                 create_folder(data_folder)
                 t.set_description(f"Processing images with tag <<{category}>>", refresh=True)
-                for id in range(1, n_downloaded + 1):
-                    processor.process(f"{preprocessed_folder}{id}.jpg")
+                id = 1
+                for idppr in range(1, n_downloaded + 1):
+                  if id > N_PHOTOS:
+                    break
+                  try:
+                    processor.process(f"{preprocessed_folder}{idppr}.jpg")
                     np.save(f"{data_folder}{id}_in", processor.image, allow_pickle=True)
                     np.save(f"{data_folder}{id}_out", processor._image, allow_pickle=True)
-                for id in range(1, n_downloaded + 1):
+                    torch.from_numpy(np.load(f"{data_folder}{id}_in.npy", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
+                    torch.from_numpy(np.load(f"{data_folder}{id}_out.npy", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
+                    id += 1
+                  except Exception as e: 
+                    print(e)
                     try:
-                      torch.from_numpy(np.load(f"{data_folder}{id}_in", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
-                      torch.from_numpy(np.load(f"{data_folder}{id}_out", mmap_mode='r+', allow_pickle=True).astype('float32').transpose((2,0,1)))
+                      os.remove(f"{data_folder}{id}_in.npy")
                     except:
-                      try:
-                        os.remove(f"{data_folder}{id}_in")
-                      except:
-                        pass
-                      
-                      try:
-                        os.remove(f"{data_folder}{id}_out")
-                      except:
-                        pass
+                      pass
 
+                    try:
+                      os.remove(f"{data_folder}{id}_out.npy")
+                    except:
+                      pass
                 shutil.rmtree(preprocessed_folder)
                 done = True
                 ack_download(os.path.join(os.environ.get('ROOT_PATH'), os.environ.get('DWD_CAT_FILE')), last_cat + i)
