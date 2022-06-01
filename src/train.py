@@ -94,7 +94,7 @@ def get_model_components(params):
     print(f'Using device: {device}')
     discriminator = discriminator.to(device)
     generator = generator.to(device)
-    
+
     ## Print out model parameters ##
     print('Discriminator # parameters:', sum(param.numel() for param in discriminator.parameters()))
     print('Generator # parameters:', sum(param.numel() for param in generator.parameters()))
@@ -115,6 +115,49 @@ def get_model_components(params):
         weight_decay=params['weight_decay']
     )
 
+    ## Upload weights if resume ##
+    if params['resume']:
+        try:
+            discriminator_weights_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/discriminator_weights_{params["experiment"]}.pt')
+            discriminator_weights = torch.load(discriminator_weights_path)
+            discriminator.load_state_dict(discriminator_weights)
+            del discriminator_weights
+            print(f'Discriminator weights loaded from {discriminator_weights_path}')
+        except:
+            raise Exception('Unable to load discriminator weights!')
+        try:
+            discriminator_optimizer_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/discriminator_optimizer_{params["experiment"]}.pt')
+            discriminator_optimizer = torch.load(discriminator_optimizer_path)
+            d_optimizer.load_state_dict(discriminator_optimizer)
+            del discriminator_optimizer
+            print(f'Discriminator optimizer loaded from {discriminator_optimizer_path}')
+        except:
+            print('Unable to load discriminator optimizer. Resetting optimizer...')
+        try:
+            generator_weights_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/generator_weights_{params["experiment"]}.pt')
+            generator_weights = torch.load(generator_weights_path)
+            generator.load_state_dict(generator_weights)
+            del generator_weights
+            print(f'Generator weights loaded from {generator_weights_path}')
+        except:
+            raise Exception('Unable to load generator weights!')
+        try:
+            generator_optimizer_path = os.path.join(
+                os.environ.get('LOG_PATH'), 
+                f'experiment_{params["experiment"]}/generator_optimizer_{params["experiment"]}.pt')
+            generator_optimizer = torch.load(generator_optimizer_path)
+            g_optimizer.load_state_dict(generator_optimizer)
+            del generator_optimizer
+            print(f'Generator optimizer loaded from {generator_optimizer_path}')
+        except:
+            print('Unable to load generator optimizer. Resetting optimizer...')
+
     return discriminator, generator, device, adv_criterion, content_criterion, d_optimizer, g_optimizer
 
 def init_wandb(params, model):
@@ -122,14 +165,21 @@ def init_wandb(params, model):
     os.environ["WANDB_START_METHOD"] = "thread"
     ## Automate tag creation on run launch:
     wandb_tags = []
+
+    wandb_tags.append(f"bsize {params['batch_size']}")
     wandb_tags.append(f"lr {params['lr']}")
+    wandb_tags.append(f"decay {params['weight_decay']}")
+    wandb_tags.append(f"img {params['width']}x{params['height']}")
+    wandb_tags.append(f"ctn weight {params['content_weight']}")
+    wandb_tags.append(f"adv weight {params['adversarial_weight']}") 
     wandb.init(
         project='DQNET',
         dir=os.environ.get('LOG_PATH'),
         tags=wandb_tags,
-        # resume='allow',
+        id=params["experiment"],
+        resume=params['resume']
     )
-    wandb.run.name = f'Experiment #{params["experiment"]}'
+    wandb.run.name = f'Experiment {params["experiment"]}'
     wandb.run.save()
     print('Wandb ready.')
     wandb.watch(model)
@@ -259,7 +309,8 @@ if __name__ == '__main__':
     params, categories = get_params()
 
     ## Create experiment folder ##
-    create_folder(os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}'))
+    if not params['resume']:
+        create_folder(os.path.join(os.environ.get('LOG_PATH'), f'experiment_{params["experiment"]}'))
 
     ## Load data ##
     dataloader_train, dataloader_test = get_data(categories, params)
@@ -275,6 +326,8 @@ if __name__ == '__main__':
     
     num_steps = len(dataloader_train) // batch_size
     num_steps_vd = len(dataloader_test) // batch_size
+    print(f'Training steps: {num_steps}')
+    print(f'Validation steps: {num_steps_vd}')
     
     ## Metrics ##
     best_psnr = -np.inf
@@ -340,19 +393,19 @@ if __name__ == '__main__':
             ## Save generator state ##
             torch.save(
                 generator.state_dict(), 
-                os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/generator_weights_{params["experiment"]}.pt'))
+                os.path.join(os.environ.get('LOG_PATH'), f'experiment_{params["experiment"]}/generator_weights_{params["experiment"]}.pt'))
             ## Save generator optimizer state ##
             torch.save(
                g_optimizer.state_dict(), 
-               os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/generator_optimizer_{params["experiment"]}.pt'))
+               os.path.join(os.environ.get('LOG_PATH'), f'experiment_{params["experiment"]}/generator_optimizer_{params["experiment"]}.pt'))
             ## Save discriminator state ##
             torch.save(
                 discriminator.state_dict(), 
-                os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/discriminator_weights_{params["experiment"]}.pt'))
+                os.path.join(os.environ.get('LOG_PATH'), f'experiment_{params["experiment"]}/discriminator_weights_{params["experiment"]}.pt'))
             ## Save discriminator optimizer state ##
             torch.save(
                g_optimizer.state_dict(), 
-               os.path.join(os.environ.get('LOG_PATH'), f'experiment{params["experiment"]}/discriminator_optimizer_{params["experiment"]}.pt'))
+               os.path.join(os.environ.get('LOG_PATH'), f'experiment_{params["experiment"]}/discriminator_optimizer_{params["experiment"]}.pt'))
             
         ##########################################################################################
             
