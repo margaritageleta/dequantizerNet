@@ -9,6 +9,9 @@ To download the dataset, please follow the instructions of [Flickr](https://www.
 python src/create_dataset.py
 ```
 
+## Dataset access
+Please, provide us with a gmail for you to access our shared drive with the datasets.
+
 ## Model training
 You will need a wandb account. Fill up environment.sh with your directories and files and run
 
